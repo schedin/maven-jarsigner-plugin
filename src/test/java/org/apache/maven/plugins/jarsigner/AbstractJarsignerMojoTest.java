@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.jarsigner;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.plugins.jarsigner;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,6 +16,7 @@ package org.apache.maven.plugins.jarsigner;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.jarsigner;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.shared.jarsigner.JarSigner;
@@ -28,69 +27,60 @@ import org.junit.Test;
 
 import static org.mockito.Mockito.*;
 
-public class AbstractJarsignerMojoTest
-{
+public class AbstractJarsignerMojoTest {
     @Test
-    public void testSignSuccessOnFirst() throws MojoExecutionException, JavaToolException
-    {
-        AbstractJarsignerMojo mojo = mock( AbstractJarsignerMojo.class );
-        JarSigner jarSigner = mock( JarSigner.class );
-        JarSignerRequest request = mock( JarSignerRequest.class );
-        doCallRealMethod().when( mojo ).sign( jarSigner, request, 1 );
+    public void testSignSuccessOnFirst() throws MojoExecutionException, JavaToolException {
+        AbstractJarsignerMojo mojo = mock(AbstractJarsignerMojo.class);
+        JarSigner jarSigner = mock(JarSigner.class);
+        JarSignerRequest request = mock(JarSignerRequest.class);
+        doCallRealMethod().when(mojo).sign(jarSigner, request, 1);
         JavaToolResult result = new JavaToolResult();
-        result.setExitCode( 0 );
-        when( jarSigner.execute( request ) ).thenReturn( result );
+        result.setExitCode(0);
+        when(jarSigner.execute(request)).thenReturn(result);
 
-        mojo.sign( jarSigner, request, 1 );
+        mojo.sign(jarSigner, request, 1);
     }
 
-    @Test( expected = MojoExecutionException.class )
-    public void testSignFailureOnFirst() throws MojoExecutionException, JavaToolException
-    {
-        AbstractJarsignerMojo mojo = mock( AbstractJarsignerMojo.class );
-        JarSigner jarSigner = mock( JarSigner.class );
-        JarSignerRequest request = mock( JarSignerRequest.class );
-        doCallRealMethod().when( mojo ).sign( jarSigner, request, 1 );
+    @Test(expected = MojoExecutionException.class)
+    public void testSignFailureOnFirst() throws MojoExecutionException, JavaToolException {
+        AbstractJarsignerMojo mojo = mock(AbstractJarsignerMojo.class);
+        JarSigner jarSigner = mock(JarSigner.class);
+        JarSignerRequest request = mock(JarSignerRequest.class);
+        doCallRealMethod().when(mojo).sign(jarSigner, request, 1);
         JavaToolResult result = new JavaToolResult();
-        result.setExitCode( 1 );
-        when( jarSigner.execute( request ) ).thenReturn( result );
+        result.setExitCode(1);
+        when(jarSigner.execute(request)).thenReturn(result);
 
-        mojo.sign( jarSigner, request, 1 );
+        mojo.sign(jarSigner, request, 1);
     }
 
     @Test
-    public void testSignFailureOnFirstSuccessOnSecond() throws MojoExecutionException, JavaToolException
-    {
-        AbstractJarsignerMojo mojo = mock( AbstractJarsignerMojo.class );
-        JarSigner jarSigner = mock( JarSigner.class );
-        JarSignerRequest request = mock( JarSignerRequest.class );
-        doCallRealMethod().when( mojo ).sign( jarSigner, request, 2 );
+    public void testSignFailureOnFirstSuccessOnSecond() throws MojoExecutionException, JavaToolException {
+        AbstractJarsignerMojo mojo = mock(AbstractJarsignerMojo.class);
+        JarSigner jarSigner = mock(JarSigner.class);
+        JarSignerRequest request = mock(JarSignerRequest.class);
+        doCallRealMethod().when(mojo).sign(jarSigner, request, 2);
         JavaToolResult result1 = new JavaToolResult();
-        result1.setExitCode( 1 );
+        result1.setExitCode(1);
         JavaToolResult result2 = new JavaToolResult();
-        result2.setExitCode( 0 );
-        when( jarSigner.execute( request ) )
-            .thenReturn( result1 )
-            .thenReturn( result2 );
+        result2.setExitCode(0);
+        when(jarSigner.execute(request)).thenReturn(result1).thenReturn(result2);
 
-        mojo.sign( jarSigner, request, 2 );
+        mojo.sign(jarSigner, request, 2);
     }
 
-    @Test( expected = MojoExecutionException.class )
-    public void testSignFailureOnFirstFailureOnSecond() throws MojoExecutionException, JavaToolException
-    {
-        AbstractJarsignerMojo mojo = mock( AbstractJarsignerMojo.class );
-        JarSigner jarSigner = mock( JarSigner.class );
-        JarSignerRequest request = mock( JarSignerRequest.class );
-        doCallRealMethod().when( mojo ).sign( jarSigner, request, 2 );
+    @Test(expected = MojoExecutionException.class)
+    public void testSignFailureOnFirstFailureOnSecond() throws MojoExecutionException, JavaToolException {
+        AbstractJarsignerMojo mojo = mock(AbstractJarsignerMojo.class);
+        JarSigner jarSigner = mock(JarSigner.class);
+        JarSignerRequest request = mock(JarSignerRequest.class);
+        doCallRealMethod().when(mojo).sign(jarSigner, request, 2);
         JavaToolResult result1 = new JavaToolResult();
-        result1.setExitCode( 1 );
+        result1.setExitCode(1);
         JavaToolResult result2 = new JavaToolResult();
-        result2.setExitCode( 1 );
-        when( jarSigner.execute( request ) )
-            .thenReturn( result1 )
-            .thenReturn( result2 );
+        result2.setExitCode(1);
+        when(jarSigner.execute(request)).thenReturn(result1).thenReturn(result2);
 
-        mojo.sign( jarSigner, request, 2 );
+        mojo.sign(jarSigner, request, 2);
     }
 }

@@ -129,7 +129,7 @@ under the License.
       <version>3.0.0</version>
     </dependency>
     <dependency>
-    <groupId>junit</groupId>
+      <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.13</version>
       <scope>test</scope>
@@ -137,7 +137,7 @@ under the License.
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>2.28.2</version><!-- 2.x for Java 7 -->
+      <version>2.28.2</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

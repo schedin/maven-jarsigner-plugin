@@ -264,13 +264,12 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      *
      * @since 3.0.1
      */
-    @Parameter( property = "jarsigner.maxTries", defaultValue = "1" )
+    @Parameter(property = "jarsigner.maxTries", defaultValue = "1")
     private int maxTries;
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
-            if ( maxTries <= 0 )
-            {
+            if (maxTries <= 0) {
                 maxTries = 1;
             }
             Toolchain toolchain = getToolchain();
@@ -523,7 +522,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         request.setStorepass(decrypt(storepass));
 
         try {
-            sign( jarSigner, request, maxTries );            
+            sign(jarSigner, request, maxTries);
         } catch (JavaToolException e) {
             throw new MojoExecutionException(getMessage("commandLineException", e.getMessage()), e);
         }
@@ -539,23 +538,20 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @throws JavaToolException
      * @throws MojoExecutionException
      */
-    void sign( JarSigner jarSigner, JarSignerRequest request, int maxTries ) 
-            throws JavaToolException, MojoExecutionException
-    {
+    void sign(JarSigner jarSigner, JarSignerRequest request, int maxTries)
+            throws JavaToolException, MojoExecutionException {
         Commandline commandLine = null;
         int resultCode = 0;
-        for ( int attempt = 0; attempt < maxTries; attempt++ )
-        {
-            JavaToolResult result = jarSigner.execute( request );
+        for (int attempt = 0; attempt < maxTries; attempt++) {
+            JavaToolResult result = jarSigner.execute(request);
             resultCode = result.getExitCode();
             commandLine = result.getCommandline();
-            if ( resultCode == 0 )
-            {
+            if (resultCode == 0) {
                 return;
             }
         }
-        throw new MojoExecutionException( getMessage( "failure", getCommandlineInfo( commandLine ), resultCode ) );
-    }    
+        throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
+    }
 
     protected String decrypt(String encoded) throws MojoExecutionException {
         try {
