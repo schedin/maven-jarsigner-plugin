@@ -184,6 +184,22 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private boolean protectedAuthenticationPath;
 
     /**
+     * How many times to try to sign or verify a jar (assuming each previous attempt is a failure).
+     *
+     * This option may be desirable if any network operations are used during signing, for example a Time Stamp
+     * Authority or network based PKCS11 HSM solution for storing code signing keys.
+     *
+     * The default is "1" for one attempt.
+     *
+     * Less than 0 and "0" we be treated as 1 (because using "skip" is accepted and encouraged,
+     * and an infinite retry loop is undesirable).
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "jarsigner.maxTries", defaultValue = "1")
+    private int maxTries;
+
+    /**
      * A set of artifact classifiers describing the project attachments that should be processed. This parameter is only
      * relevant if {@link #processAttachedArtifacts} is <code>true</code>. If empty, all attachments are included.
      *
@@ -250,22 +266,6 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      */
     @Component(hint = "mng-4384")
     private SecDispatcher securityDispatcher;
-
-    /**
-     * How many times to try to sign or verify a jar (assuming each previous attempt is a failure).
-     *
-     * This option may be desirable if you are using a Time Stamp Authority,
-     * and your network conditions cause intermittent failures.
-     *
-     * The default is "1" for one attempt.
-     *
-     * Less than 0 and "0" we be treated as 1 (because using "skip" is accepted and encouraged,
-     * and an infinite retry loop is undesirable).
-     *
-     * @since 3.0.1
-     */
-    @Parameter(property = "jarsigner.maxTries", defaultValue = "1")
-    private int maxTries;
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
