@@ -538,6 +538,8 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @throws JavaToolException
      * @throws MojoExecutionException
      */
+    // TODO: The method should not be named sign.
+    // TODO: Merge delay from https://github.com/bdt-stru/maven-jarsigner-plugin/tree/maxTries into code.
     void sign(JarSigner jarSigner, JarSignerRequest request, int maxTries)
             throws JavaToolException, MojoExecutionException {
         Commandline commandLine = null;
