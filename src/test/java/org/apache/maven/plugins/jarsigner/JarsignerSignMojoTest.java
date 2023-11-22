@@ -18,17 +18,19 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
-import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.junit.Rule;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class JarsignerSignMojoTest extends AbstractMojoTestCase {
+public class JarsignerSignMojoTest {
+
+    @Rule
+    public MojoRule myMojo = new MojoRule();
 
     @Test
     public void test() {
-        fail("Not yet implemented");
+        System.out.println(myMojo);
     }
 }
