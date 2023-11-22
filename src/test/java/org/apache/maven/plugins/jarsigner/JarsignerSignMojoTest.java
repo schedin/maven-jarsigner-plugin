@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.jarsigner;
 
 import org.apache.maven.plugin.testing.MojoRule;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -26,11 +27,18 @@ import static org.junit.Assert.*;
 
 public class JarsignerSignMojoTest {
 
+    private static final String TEST_GROUP = "test-group";
+    private static final String TEST_ARTIFACT = "test-artifact";
+    private static final String TEST_VERSION = "42.0.1";
+    private static final String SIGN_GOAL = "sign";
+
     @Rule
-    public MojoRule myMojo = new MojoRule();
+    public MojoRule mojoRule = new MojoRule();
 
     @Test
-    public void test() {
-        System.out.println(myMojo);
+    public void test() throws Exception {
+        PlexusConfiguration pluginConfiguration = null;
+        JarsignerSignMojo jarsignerSignMojo = (JarsignerSignMojo)
+                mojoRule.lookupMojo(TEST_GROUP, TEST_ARTIFACT, TEST_VERSION, SIGN_GOAL, pluginConfiguration);
     }
 }
