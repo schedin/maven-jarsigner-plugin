@@ -140,6 +140,7 @@ under the License.
       <version>4.0.0-alpha-2</version>
       <scope>test</scope>
     </dependency>
+    <!-- Used for test cases to log. Also good because maven-plugin-testing will implicitly use slf4j -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
@@ -149,7 +150,7 @@ under the License.
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>2.28.2</version>
+      <version>4.11.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

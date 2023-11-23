@@ -24,21 +24,27 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 
 public class JarsignerSignMojoTest {
-
-    private static final String TEST_GROUP = "test-group";
-    private static final String TEST_ARTIFACT = "test-artifact";
-    private static final String TEST_VERSION = "42.0.1";
-    private static final String SIGN_GOAL = "sign";
 
     @Rule
     public MojoRule mojoRule = new MojoRule();
 
     @Test
     public void test() throws Exception {
-        PlexusConfiguration pluginConfiguration = null;
-        JarsignerSignMojo jarsignerSignMojo = (JarsignerSignMojo)
-                mojoRule.lookupMojo(TEST_GROUP, TEST_ARTIFACT, TEST_VERSION, SIGN_GOAL, pluginConfiguration);
+        PlexusConfiguration pluginConfiguration = mock(PlexusConfiguration.class);
+        System.out.println(pluginConfiguration);
+        
+        JarsignerSignMojo mojo = new JarsignerSignMojo();
+        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, pluginConfiguration);
+        
+        //JarsignerSignMojo myMojo = (JarsignerSignMojo) mojoRule.lookupMojo( "touch", pom );
+        //assertNotNull( myMojo );
+        mojo.execute();
+
+//        PlexusConfiguration pluginConfiguration = null;
+//        JarsignerSignMojo jarsignerSignMojo = (JarsignerSignMojo)
+//                mojoRule.lookupMojo(TEST_GROUP, TEST_ARTIFACT, TEST_VERSION, SIGN_GOAL, pluginConfiguration);
     }
 }
