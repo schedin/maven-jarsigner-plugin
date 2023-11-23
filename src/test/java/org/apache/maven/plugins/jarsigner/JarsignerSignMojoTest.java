@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.jarsigner;
 
 import org.apache.maven.plugin.testing.MojoRule;
+import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,14 +32,16 @@ public class JarsignerSignMojoTest {
     @Rule
     public MojoRule mojoRule = new MojoRule();
 
+    private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
+    
     @Test
     public void test() throws Exception {
-        PlexusConfiguration pluginConfiguration = mock(PlexusConfiguration.class);
-        System.out.println(pluginConfiguration);
-        
         JarsignerSignMojo mojo = new JarsignerSignMojo();
-        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, pluginConfiguration);
-        
+
+        configuration.addChild("processMainArtifact", "true");
+
+        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
+
         //JarsignerSignMojo myMojo = (JarsignerSignMojo) mojoRule.lookupMojo( "touch", pom );
         //assertNotNull( myMojo );
         mojo.execute();
