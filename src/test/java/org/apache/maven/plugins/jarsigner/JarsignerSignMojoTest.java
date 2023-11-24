@@ -57,7 +57,8 @@ public class JarsignerSignMojoTest {
 
 //        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, "maven-jarsigner-plugin", new File("src/test/resources/unit/project-to-test/pom.xml"));
 
-        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
+//        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
+        JarsignerSignMojo mojo = mojoRule.lookupEmptyMojo("sign", new File("src/test/resources/unit/empty-project/pom.xml"));
         
 //        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
 
