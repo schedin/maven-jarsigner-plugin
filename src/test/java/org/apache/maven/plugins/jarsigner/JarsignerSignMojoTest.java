@@ -18,6 +18,7 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
+import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 
+@MojoTest
 public class JarsignerSignMojoTest {
 
     @Rule
@@ -36,17 +38,20 @@ public class JarsignerSignMojoTest {
     
     @Test
     public void test() throws Exception {
-        JarsignerSignMojo mojo = new JarsignerSignMojo();
-
         configuration.addChild("processMainArtifact", "true");
 
+        JarsignerSignMojo mojo = new JarsignerSignMojo();
         mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
 
 //        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("mygroup",  "artifactid", "1.0.", "sign", null);
-        mojo.execute();
+
 
 //        PlexusConfiguration pluginConfiguration = null;
-//        JarsignerSignMojo jarsignerSignMojo = (JarsignerSignMojo)
-//                mojoRule.lookupMojo(TEST_GROUP, TEST_ARTIFACT, TEST_VERSION, SIGN_GOAL, pluginConfiguration);
+//        JarsignerSignMojo mojo = (JarsignerSignMojo)
+//                mojoRule.lookupMojo("testgroup", "testartifact", "10.0.2", "sign", configuration);
+        
+        
+        mojo.execute();
+        
     }
 }
