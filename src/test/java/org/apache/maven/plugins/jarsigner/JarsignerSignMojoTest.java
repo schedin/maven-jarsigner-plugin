@@ -20,13 +20,20 @@ package org.apache.maven.plugins.jarsigner;
 
 import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.plugin.testing.MojoRule;
+import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
+
+import java.io.File;
 
 @MojoTest
 public class JarsignerSignMojoTest {
@@ -36,14 +43,23 @@ public class JarsignerSignMojoTest {
 
     private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
     
+    
+    @Before
+    public void setUp() {
+    }
+    
     @Test
     public void test() throws Exception {
         configuration.addChild("processMainArtifact", "true");
 
-        JarsignerSignMojo mojo = new JarsignerSignMojo();
-        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
+//        JarsignerSignMojo mojo = new JarsignerSignMojo();
+//        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
 
-//        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("mygroup",  "artifactid", "1.0.", "sign", null);
+//        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, "maven-jarsigner-plugin", new File("src/test/resources/unit/project-to-test/pom.xml"));
+
+        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
+        
+//        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
 
 
 //        PlexusConfiguration pluginConfiguration = null;
