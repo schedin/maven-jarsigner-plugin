@@ -42,8 +42,7 @@ public class JarsignerSignMojoTest {
 
         mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
 
-        //JarsignerSignMojo myMojo = (JarsignerSignMojo) mojoRule.lookupMojo( "touch", pom );
-        //assertNotNull( myMojo );
+//        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("mygroup",  "artifactid", "1.0.", "sign", null);
         mojo.execute();
 
 //        PlexusConfiguration pluginConfiguration = null;
