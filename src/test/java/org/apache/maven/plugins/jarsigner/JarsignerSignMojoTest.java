@@ -59,6 +59,7 @@ public class JarsignerSignMojoTest {
         Artifact mainArtifact = mock(Artifact.class);
         when(project.getArtifact()).thenReturn(mainArtifact);
         JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project);
+        
     }
     
     @Ignore

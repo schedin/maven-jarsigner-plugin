@@ -74,7 +74,6 @@ public class ReflectionMagicJarsignerSignMojoTest {
                 currentClazz = currentClazz.getSuperclass();
             }
             return fields;
-            
         }
         
 
