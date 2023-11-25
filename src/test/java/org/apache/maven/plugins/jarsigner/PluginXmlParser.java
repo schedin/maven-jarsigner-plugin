@@ -82,7 +82,7 @@ public class PluginXmlParser {
         }
     }
 
-    private static List<Field> getAllFields(Class<?> clazz) {
+    static List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         Class<?> currentClazz = clazz;
         while (currentClazz != null) {

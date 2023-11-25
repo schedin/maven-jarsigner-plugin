@@ -19,6 +19,9 @@
 package org.apache.maven.plugins.jarsigner;
 
 
+import java.lang.reflect.Field;
+import java.util.List;
+
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
 
@@ -26,10 +29,18 @@ public class MojoTestCreator {
     
     public static <T extends Mojo> T create(Class<T> clazz, MavenProject project) throws Exception {
         T mojo = clazz.getDeclaredConstructor().newInstance();
-        
         PluginXmlParser.setDefaultValues(mojo);
-        
+        setAttribute(mojo, "project", project);
         return mojo;
     }
 
+    public static void setAttribute(Object instance, String fieldName, Object value) throws Exception {
+        List<Field> fields = PluginXmlParser.getAllFields(instance.getClass());
+       
+        Field field = fields.stream().filter(f -> f.getName().equals(fieldName))
+                        .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
+                            + fieldName + " in class " + instance.getClass().getName()));
+        field.setAccessible(true);
+        field.set(instance, value);
+    }
 }

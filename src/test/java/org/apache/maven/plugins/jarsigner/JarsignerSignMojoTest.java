@@ -32,6 +32,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.Mock;
 
 import static org.junit.Assert.*;
@@ -39,12 +40,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class JarsignerSignMojoTest {
 
     @Rule
     public MojoRule mojoRule = new MojoRule();
 
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
+    
     private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
     
 
@@ -57,9 +66,13 @@ public class JarsignerSignMojoTest {
     @Test
     public void testSimpleJavaProject() throws Exception {
         Artifact mainArtifact = mock(Artifact.class);
+        File mainJarFile = folder.newFile("my-project.jar");
+        createDummyZipFile(mainJarFile);
+        when(mainArtifact.getFile()).thenReturn(mainJarFile);
         when(project.getArtifact()).thenReturn(mainArtifact);
         JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project);
-        
+
+        mojo.execute();
     }
     
     @Ignore
@@ -86,4 +99,13 @@ public class JarsignerSignMojoTest {
         mojo.execute();
         
     }
+
+    private static void createDummyZipFile(File zipFile) throws IOException {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
+            ZipEntry entry = new ZipEntry("dummy-entry.txt");
+            zipOutputStream.putNextEntry(entry);
+        }
+    }
+
+    
 }
