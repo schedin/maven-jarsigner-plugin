@@ -24,13 +24,22 @@ import java.util.List;
 
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.jarsigner.JarSigner;
+import org.mockito.Mockito;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 public class MojoTestCreator {
     
-    public static <T extends Mojo> T create(Class<T> clazz, MavenProject project) throws Exception {
+    public static <T extends Mojo> T create(Class<T> clazz, MavenProject project, JarSigner jarSigner) throws Exception {
         T mojo = clazz.getDeclaredConstructor().newInstance();
         PluginXmlParser.setDefaultValues(mojo);
         setAttribute(mojo, "project", project);
+        setAttribute(mojo, "jarSigner", jarSigner);
+        
+        // SecDispatcher that only returns passed value
+        SecDispatcher securityDispatcher = Mockito.mock(SecDispatcher.class);
+        Mockito.when(securityDispatcher.decrypt(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
+        setAttribute(mojo, "securityDispatcher", securityDispatcher);
         return mojo;
     }
 

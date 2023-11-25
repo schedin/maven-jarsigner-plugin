@@ -22,6 +22,7 @@ import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.jarsigner.JarSigner;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -65,12 +66,15 @@ public class JarsignerSignMojoTest {
 
     @Test
     public void testSimpleJavaProject() throws Exception {
+        
+        JarSigner jarSigner = mock(JarSigner.class);
+        
         Artifact mainArtifact = mock(Artifact.class);
         File mainJarFile = folder.newFile("my-project.jar");
         createDummyZipFile(mainJarFile);
         when(mainArtifact.getFile()).thenReturn(mainJarFile);
         when(project.getArtifact()).thenReturn(mainArtifact);
-        JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project);
+        JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project, jarSigner);
 
         mojo.execute();
     }
@@ -86,26 +90,24 @@ public class JarsignerSignMojoTest {
 //        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, "maven-jarsigner-plugin", new File("src/test/resources/unit/project-to-test/pom.xml"));
 
 //        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
-        JarsignerSignMojo mojo = mojoRule.lookupEmptyMojo("sign", new File("src/test/resources/unit/empty-project/pom.xml"));
+//        JarsignerSignMojo mojo = mojoRule.lookupEmptyMojo("sign", new File("src/test/resources/unit/empty-project/pom.xml"));
         
-//        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
+        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
 
 
 //        PlexusConfiguration pluginConfiguration = null;
 //        JarsignerSignMojo mojo = (JarsignerSignMojo)
 //                mojoRule.lookupMojo("testgroup", "testartifact", "10.0.2", "sign", configuration);
-        
-        
+
         mojo.execute();
         
     }
 
+    /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
     private static void createDummyZipFile(File zipFile) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
             ZipEntry entry = new ZipEntry("dummy-entry.txt");
             zipOutputStream.putNextEntry(entry);
         }
     }
-
-    
 }
