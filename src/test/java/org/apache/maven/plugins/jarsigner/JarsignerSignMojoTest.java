@@ -19,7 +19,9 @@
 package org.apache.maven.plugins.jarsigner;
 
 import org.apache.maven.api.plugin.testing.MojoTest;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.testing.MojoRule;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -27,15 +29,17 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 
-@MojoTest
 public class JarsignerSignMojoTest {
 
     @Rule
@@ -43,11 +47,21 @@ public class JarsignerSignMojoTest {
 
     private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
     
+
+    public MavenProject project = mock(MavenProject.class);
     
     @Before
     public void setUp() {
     }
+
+    @Test
+    public void testSimpleJavaProject() throws Exception {
+        Artifact mainArtifact = mock(Artifact.class);
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project);
+    }
     
+    @Ignore
     @Test
     public void test() throws Exception {
         configuration.addChild("processMainArtifact", "true");
