@@ -23,6 +23,9 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
+import org.apache.maven.shared.jarsigner.JarSignerRequest;
+import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -34,11 +37,15 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -66,8 +73,10 @@ public class JarsignerSignMojoTest {
 
     @Test
     public void testSimpleJavaProject() throws Exception {
-        
         JarSigner jarSigner = mock(JarSigner.class);
+        
+        JavaToolResult javaToolResult = mock(JavaToolResult.class);
+        
         
         Artifact mainArtifact = mock(Artifact.class);
         File mainJarFile = folder.newFile("my-project.jar");
@@ -76,7 +85,23 @@ public class JarsignerSignMojoTest {
         when(project.getArtifact()).thenReturn(mainArtifact);
         JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project, jarSigner);
 
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenAnswer(invocation -> javaToolResult);
+        
+        //when(jarSigner.execute(Mockito.isNull(JarSignerSignRequest.class))).thenReturn(null);
+        
         mojo.execute();
+        
+        //verify(jarSigner).execute(any(JarSignerSignRequest.class));
+        //verify(jarSigner).execute(Mockito.isNull());
+
+        ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
+        verify(jarSigner).execute(requestArgument.capture());
+        
+        //TODO: Make every assert
+        assertEquals(mainJarFile, requestArgument.getValue().getArchive());
+        
+        
+        
     }
     
     @Ignore
@@ -111,3 +136,4 @@ public class JarsignerSignMojoTest {
         }
     }
 }
+
