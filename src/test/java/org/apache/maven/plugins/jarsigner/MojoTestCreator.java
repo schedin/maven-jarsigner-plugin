@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.Mojo;
@@ -31,24 +32,35 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
-public class MojoTestCreator {
-    
-    public static <T extends Mojo> T create(Class<T> clazz, MavenProject project, JarSigner jarSigner) throws Exception {
+public class MojoTestCreator<T extends Mojo> {
+
+    private final Class<T> clazz;
+    private final MavenProject project;
+    private final File projectDir;
+    private final JarSigner jarSigner;
+    private List<Field> fields;
+
+    public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner) throws Exception {
+        this.clazz = clazz;
+        this.project = project;
+        this.projectDir = projectDir;
+        this.jarSigner = jarSigner;
+        fields = getAllFields(clazz);
+    }
+
+    public T configure() throws Exception {
         T mojo = clazz.getDeclaredConstructor().newInstance();
         setDefaultValues(mojo);
-        
-        
+
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
-        
+
         SecDispatcher securityDispatcher = str -> str; //Simple SecDispatcher that only returns parameter
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
         return mojo;
     }
 
-    public static void setAttribute(Object instance, String fieldName, Object value) throws Exception {
-        List<Field> fields = getAllFields(instance.getClass());
-
+    public void setAttribute(Object instance, String fieldName, Object value) throws Exception {
         Field field = fields.stream().filter(f -> f.getName().equals(fieldName))
                         .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
                             + fieldName + " in class " + instance.getClass().getName()));
@@ -56,9 +68,7 @@ public class MojoTestCreator {
         field.set(instance, value);
     }
 
-    private static void setDefaultValues(Mojo mojo) throws Exception {
-        List<Field> fields = getAllFields(mojo.getClass());
-
+    private void setDefaultValues(Mojo mojo) throws Exception {
         Map<String, String> defaultConfiguration = PluginXmlParser.getMojoDefaultConfiguration(mojo);
         for (String parameterName : defaultConfiguration.keySet()) {
             String defaultValue = defaultConfiguration.get(parameterName);
@@ -82,9 +92,9 @@ public class MojoTestCreator {
         };
     }
 
-    private static String substituteParameterValueVariables(String parameterValue) {
-        String workingDir = "c";
-        parameterValue = parameterValue.replaceAll(Pattern.quote("${project.basedir}"), workingDir);
+    private String substituteParameterValueVariables(String parameterValue) {
+        parameterValue = parameterValue.replaceAll(Pattern.quote("${project.basedir}"),
+            Matcher.quoteReplacement(projectDir.getPath()));
         return parameterValue;
     }
     

@@ -31,8 +31,7 @@ import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
-import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -57,18 +56,34 @@ public class JarsignerSignMojoTest {
 
     public MavenProject project = mock(MavenProject.class);
 
+    private File dummyMavenProjectDir;
+
+    private JarSigner jarSigner;
+
+    private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
+
+    @Before
+    public void setUp() throws Exception {
+        dummyMavenProjectDir = folder.newFolder("dummy-project");
+        
+        jarSigner = mock(JarSigner.class);
+        mojoTestCreator = new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, dummyMavenProjectDir, jarSigner);
+    }
+
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-        JarSigner jarSigner = mock(JarSigner.class);
+
 
         Artifact mainArtifact = mock(Artifact.class);
-        File mainJarFile = folder.newFile("my-project.jar");
+        File mainJarFile = new File(dummyMavenProjectDir, "my-project.jar");
+        
         createDummyZipFile(mainJarFile);
+        
         when(mainArtifact.getFile()).thenReturn(mainJarFile);
         when(project.getArtifact()).thenReturn(mainArtifact);
 
-        JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project, jarSigner);
+        JarsignerSignMojo mojo = mojoTestCreator.configure();
 
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
@@ -93,10 +108,10 @@ public class JarsignerSignMojoTest {
         assertNull(request.getProviderArg());
         assertNull(request.getMaxMemory());
         assertThat(request.getArguments()[0], startsWith("-J-Dfile.encoding="));
-        assertNull(request.getWorkingDirectory()); // TODO: Setup workingDirectory since this value is defaulted to ${project.basedir}
+        assertEquals(dummyMavenProjectDir, request.getWorkingDirectory());
         assertEquals(mainJarFile, request.getArchive());
         assertFalse(request.isProtectedAuthenticationPath());
-        
+
         assertNull(request.getKeypass());
         assertNull(request.getSigfile());
         assertNull(request.getTsaLocation());
