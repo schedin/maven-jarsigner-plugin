@@ -18,14 +18,12 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
-
 import java.lang.reflect.Field;
 import java.util.List;
 
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
-import org.mockito.Mockito;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 public class MojoTestCreator {
@@ -36,9 +34,7 @@ public class MojoTestCreator {
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
         
-        // SecDispatcher that only returns passed value
-        SecDispatcher securityDispatcher = Mockito.mock(SecDispatcher.class);
-        Mockito.when(securityDispatcher.decrypt(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
+        SecDispatcher securityDispatcher = str -> str; //Simple SecDispatcher that only returns parameter
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
         return mojo;
     }
