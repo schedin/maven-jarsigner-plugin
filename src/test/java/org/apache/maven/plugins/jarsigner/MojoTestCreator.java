@@ -18,8 +18,13 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
+import java.io.File;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
@@ -30,7 +35,9 @@ public class MojoTestCreator {
     
     public static <T extends Mojo> T create(Class<T> clazz, MavenProject project, JarSigner jarSigner) throws Exception {
         T mojo = clazz.getDeclaredConstructor().newInstance();
-        PluginXmlParser.setDefaultValues(mojo);
+        setDefaultValues(mojo);
+        
+        
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
         
@@ -40,12 +47,54 @@ public class MojoTestCreator {
     }
 
     public static void setAttribute(Object instance, String fieldName, Object value) throws Exception {
-        List<Field> fields = PluginXmlParser.getAllFields(instance.getClass());
-       
+        List<Field> fields = getAllFields(instance.getClass());
+
         Field field = fields.stream().filter(f -> f.getName().equals(fieldName))
                         .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
                             + fieldName + " in class " + instance.getClass().getName()));
         field.setAccessible(true);
         field.set(instance, value);
+    }
+
+    private static void setDefaultValues(Mojo mojo) throws Exception {
+        List<Field> fields = getAllFields(mojo.getClass());
+
+        Map<String, String> defaultConfiguration = PluginXmlParser.getMojoDefaultConfiguration(mojo);
+        for (String parameterName : defaultConfiguration.keySet()) {
+            String defaultValue = defaultConfiguration.get(parameterName);
+            defaultValue = substituteParameterValueVariables(defaultValue);
+
+            Field field = fields.stream().filter(f -> f.getName().equals(parameterName))
+                .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
+                    + parameterName + " in class " + mojo.getClass().getName()));
+
+            field.setAccessible(true);
+            Class<?> fieldType = field.getType();
+            if (fieldType.equals(String.class)) {
+                field.set(mojo, defaultValue.toString());
+            } else if (fieldType.equals(int.class)) {
+                field.setInt(mojo, Integer.parseInt(defaultValue));
+            } else if (fieldType.equals(boolean.class)) {
+                field.setBoolean(mojo, Boolean.parseBoolean(defaultValue));
+            } else if (fieldType.equals(File.class)) {
+                field.set(mojo, new File(defaultValue));
+            }
+        };
+    }
+
+    private static String substituteParameterValueVariables(String parameterValue) {
+        String workingDir = "c";
+        parameterValue = parameterValue.replaceAll(Pattern.quote("${project.basedir}"), workingDir);
+        return parameterValue;
+    }
+    
+    static List<Field> getAllFields(Class<?> clazz) {
+        List<Field> fields = new ArrayList<>();
+        Class<?> currentClazz = clazz;
+        while (currentClazz != null) {
+            fields.addAll(Arrays.asList(currentClazz.getDeclaredFields()));
+            currentClazz = currentClazz.getSuperclass();
+        }
+        return fields;
     }
 }

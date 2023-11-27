@@ -23,20 +23,27 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PluginXmlParser {
-    private static final String IMPLEMENTATION_TAG = "implementation";
+    private static final String MOJO_IMPLEMENTATION_TAG = "implementation";
     private static final String MOJO_TAG = "mojo";
     private static final String CONF_DEFAULT_VALUE = "default-value";
 
+    /*
     public static void setDefaultValues(Mojo mojo) throws Exception {
         InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream("META-INF/maven/plugin.xml");
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -81,23 +88,47 @@ public class PluginXmlParser {
             throw new RuntimeException("Mojo not found for class: " + mojo.getClass().getName());
         }
     }
+    */
 
-    static List<Field> getAllFields(Class<?> clazz) {
-        List<Field> fields = new ArrayList<>();
-        Class<?> currentClazz = clazz;
-        while (currentClazz != null) {
-            fields.addAll(Arrays.asList(currentClazz.getDeclaredFields()));
-            currentClazz = currentClazz.getSuperclass();
+    public static Map<String, String> getMojoDefaultConfiguration(Mojo mojo) throws Exception {
+        Map<String, String> defaultConfiguration = new LinkedHashMap<>();
+
+        InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream("META-INF/maven/plugin.xml");
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        Document doc = dBuilder.parse(inputStream);
+        doc.getDocumentElement().normalize();
+
+        Element mojoElement = findMojoByClass(doc, mojo.getClass().getName());
+        if (mojoElement == null) {
+            throw new RuntimeException("Mojo not found for class: " + mojo.getClass().getName());
         }
-        return fields;
+
+        Element configurationElement = (Element) mojoElement.getElementsByTagName("configuration").item(0);
+        NodeList configurationList = configurationElement.getChildNodes();
+        for (int i = 0; i < configurationList.getLength(); i++) {
+            Node child = configurationList.item(i);
+            if (child.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            configurationElement = (Element) child;
+            String configurationParameterName = configurationElement.getTagName();
+
+            if (configurationElement.hasAttribute(CONF_DEFAULT_VALUE)) {
+                String defaultValue = configurationElement.getAttribute(CONF_DEFAULT_VALUE);
+                defaultConfiguration.put(configurationParameterName, defaultValue);
+            }
+        }
+        return defaultConfiguration;
     }
     
-    
+
+    /** Searches in every &lt;mojo&gt; element for an &lt;implementation&gt; matching the class name */ 
     private static Element findMojoByClass(Document doc, String className) {
         NodeList mojoList = doc.getElementsByTagName(MOJO_TAG);
         for (int i = 0; i < mojoList.getLength(); i++) {
             Element mojoElement = (Element) mojoList.item(i);
-            String mojoClass = getTextContent(mojoElement, IMPLEMENTATION_TAG);
+            String mojoClass = getTextContent(mojoElement, MOJO_IMPLEMENTATION_TAG);
             if (mojoClass.equals(className)) {
                 return mojoElement;
             }
