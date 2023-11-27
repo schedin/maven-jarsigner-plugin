@@ -18,46 +18,38 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
-import org.apache.maven.api.plugin.testing.MojoTest;
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.testing.MojoRule;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.jarsigner.JarSigner;
-import org.apache.maven.shared.jarsigner.JarSignerRequest;
-import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
-import org.apache.maven.shared.utils.cli.Commandline;
-import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
-import org.apache.maven.shared.utils.cli.shell.Shell;
-import org.codehaus.plexus.PlexusTestCase;
-import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
-import org.codehaus.plexus.configuration.PlexusConfiguration;
-import org.codehaus.plexus.util.ReaderFactory;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.verify;
-
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.testing.MojoRule;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.jarsigner.JarSigner;
+import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+import org.apache.maven.shared.utils.cli.Commandline;
+import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
+import org.apache.maven.shared.utils.cli.shell.Shell;
+import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentCaptor;
+
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
-import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_ERROR;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.any;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JarsignerSignMojoTest {
 
@@ -66,47 +58,59 @@ public class JarsignerSignMojoTest {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
-    
+
     private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
-    
 
     public MavenProject project = mock(MavenProject.class);
-    
-    @Before
-    public void setUp() {
-    }
 
+    /** Standard Java project with nothing special configured */
     @Test
-    public void testSimpleJavaProject() throws Exception {
+    public void testStandardJavaProject() throws Exception {
         JarSigner jarSigner = mock(JarSigner.class);
-        
+
         Artifact mainArtifact = mock(Artifact.class);
         File mainJarFile = folder.newFile("my-project.jar");
         createDummyZipFile(mainJarFile);
         when(mainArtifact.getFile()).thenReturn(mainJarFile);
         when(project.getArtifact()).thenReturn(mainArtifact);
+
         JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project, jarSigner);
 
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
-        
+
         //when(jarSigner.execute(Mockito.isNull(JarSignerSignRequest.class))).thenReturn(null);
-        
+
         mojo.execute();
-        
+
         //verify(jarSigner).execute(any(JarSignerSignRequest.class));
         //verify(jarSigner).execute(Mockito.isNull());
 
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
         verify(jarSigner).execute(requestArgument.capture());
         JarSignerSignRequest request = requestArgument.getValue();
-        
-        //TODO: Make every assert
+
+        assertFalse(request.isVerbose());
+        assertNull(request.getKeystore());
+        assertNull(request.getStoretype());
+        assertNull(request.getStorepass());
+        assertNull(request.getAlias());
+        assertNull(request.getProviderName());
+        assertNull(request.getProviderClass());
+        assertNull(request.getProviderArg());
+        assertNull(request.getMaxMemory());
+        assertThat(request.getArguments()[0], startsWith("-J-Dfile.encoding="));
+        assertNull(request.getWorkingDirectory()); // TODO: Setup workingDirectory since this value is defaulted to ${project.basedir}
         assertEquals(mainJarFile, request.getArchive());
+        assertFalse(request.isProtectedAuthenticationPath());
         
-        
-        
+        assertNull(request.getKeypass());
+        assertNull(request.getSigfile());
+        assertNull(request.getTsaLocation());
+        assertNull(request.getTsaAlias());
+        assertNull(request.getSignedjar()); // TODO: Current JarsignerSignMojo does not have support for this parameter.
+        assertNull(request.getCertchain());
     }
-    
+
     @Ignore
     @Test
     public void test() throws Exception {
@@ -119,7 +123,7 @@ public class JarsignerSignMojoTest {
 
 //        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
 //        JarsignerSignMojo mojo = mojoRule.lookupEmptyMojo("sign", new File("src/test/resources/unit/empty-project/pom.xml"));
-        
+
         JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
 
 
@@ -128,7 +132,7 @@ public class JarsignerSignMojoTest {
 //                mojoRule.lookupMojo("testgroup", "testartifact", "10.0.2", "sign", configuration);
 
         mojo.execute();
-        
+
     }
 
     /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
@@ -138,7 +142,7 @@ public class JarsignerSignMojoTest {
             zipOutputStream.putNextEntry(entry);
         }
     }
-    
+
     static class TestJavaToolResults {
         static final JavaToolResult RESULT_OK = createOk();
         static final JavaToolResult RESULT_ERROR = createError();
