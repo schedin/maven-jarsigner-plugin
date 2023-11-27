@@ -25,7 +25,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -54,12 +53,7 @@ import static org.mockito.Mockito.when;
 public class JarsignerSignMojoTest {
 
     @Rule
-    public MojoRule mojoRule = new MojoRule();
-
-    @Rule
     public TemporaryFolder folder = new TemporaryFolder();
-
-    private final DefaultPlexusConfiguration configuration = new DefaultPlexusConfiguration("configuration");
 
     public MavenProject project = mock(MavenProject.class);
 
@@ -109,30 +103,6 @@ public class JarsignerSignMojoTest {
         assertNull(request.getTsaAlias());
         assertNull(request.getSignedjar()); // TODO: Current JarsignerSignMojo does not have support for this parameter.
         assertNull(request.getCertchain());
-    }
-
-    @Ignore
-    @Test
-    public void test() throws Exception {
-        configuration.addChild("processMainArtifact", "true");
-
-//        JarsignerSignMojo mojo = new JarsignerSignMojo();
-//        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, configuration);
-
-//        mojo = (JarsignerSignMojo) mojoRule.configureMojo(mojo, "maven-jarsigner-plugin", new File("src/test/resources/unit/project-to-test/pom.xml"));
-
-//        JarsignerSignMojo mojo = mojoRule.lookupMojo("sign", new File("src/test/resources/unit/project-to-test/pom.xml"));
-//        JarsignerSignMojo mojo = mojoRule.lookupEmptyMojo("sign", new File("src/test/resources/unit/empty-project/pom.xml"));
-
-        JarsignerSignMojo mojo = (JarsignerSignMojo) mojoRule.lookupMojo("org.apache.maven.plugins",  "maven-jarsigner-plugin", "3.1.0-SNAPSHOT", "sign", null);
-
-
-//        PlexusConfiguration pluginConfiguration = null;
-//        JarsignerSignMojo mojo = (JarsignerSignMojo)
-//                mojoRule.lookupMojo("testgroup", "testartifact", "10.0.2", "sign", configuration);
-
-        mojo.execute();
-
     }
 
     /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */

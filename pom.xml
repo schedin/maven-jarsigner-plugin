@@ -134,13 +134,7 @@ under the License.
       <version>4.13</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.maven.plugin-testing</groupId>
-      <artifactId>maven-plugin-testing-harness</artifactId>
-      <version>4.0.0-alpha-2</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- Used for test cases to log. Also good because maven-plugin-testing will implicitly use slf4j -->
+    <!-- Used for test cases to perfor simple logging without any SLF4J warning -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
