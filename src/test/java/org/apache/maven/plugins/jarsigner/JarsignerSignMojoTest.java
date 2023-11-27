@@ -25,7 +25,9 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
+import org.apache.maven.shared.utils.cli.shell.Shell;
 import org.codehaus.plexus.PlexusTestCase;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -54,6 +56,9 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
+import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_ERROR;
+
 public class JarsignerSignMojoTest {
 
     @Rule
@@ -75,9 +80,6 @@ public class JarsignerSignMojoTest {
     public void testSimpleJavaProject() throws Exception {
         JarSigner jarSigner = mock(JarSigner.class);
         
-        JavaToolResult javaToolResult = mock(JavaToolResult.class);
-        
-        
         Artifact mainArtifact = mock(Artifact.class);
         File mainJarFile = folder.newFile("my-project.jar");
         createDummyZipFile(mainJarFile);
@@ -85,7 +87,7 @@ public class JarsignerSignMojoTest {
         when(project.getArtifact()).thenReturn(mainArtifact);
         JarsignerSignMojo mojo = MojoTestCreator.create(JarsignerSignMojo.class, project, jarSigner);
 
-        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenAnswer(invocation -> javaToolResult);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         
         //when(jarSigner.execute(Mockito.isNull(JarSignerSignRequest.class))).thenReturn(null);
         
@@ -96,9 +98,10 @@ public class JarsignerSignMojoTest {
 
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
         verify(jarSigner).execute(requestArgument.capture());
+        JarSignerSignRequest request = requestArgument.getValue();
         
         //TODO: Make every assert
-        assertEquals(mainJarFile, requestArgument.getValue().getArchive());
+        assertEquals(mainJarFile, request.getArchive());
         
         
         
@@ -133,6 +136,35 @@ public class JarsignerSignMojoTest {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
             ZipEntry entry = new ZipEntry("dummy-entry.txt");
             zipOutputStream.putNextEntry(entry);
+        }
+    }
+    
+    static class TestJavaToolResults {
+        static final JavaToolResult RESULT_OK = createOk();
+        static final JavaToolResult RESULT_ERROR = createError();
+
+        private static JavaToolResult createOk() {
+            JavaToolResult result = new JavaToolResult();
+            result.setExitCode(0);
+            result.setExecutionException(null);
+            result.setCommandline(getSimpleCommandline());
+            return result;
+        }
+
+        private static JavaToolResult createError() {
+            JavaToolResult result = new JavaToolResult();
+            result.setExitCode(1);
+            result.setExecutionException(null);
+            result.setCommandline(getSimpleCommandline());
+            return result;
+        }
+
+        private static Commandline getSimpleCommandline() {
+            Shell shell = new Shell();
+            Commandline commandline = new Commandline(shell);
+            commandline.setExecutable("jarsigner");
+            commandline.addArguments("my-project.jar", "myalias");
+            return commandline;
         }
     }
 }
