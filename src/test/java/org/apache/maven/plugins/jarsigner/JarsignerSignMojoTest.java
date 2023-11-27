@@ -107,8 +107,8 @@ public class JarsignerSignMojoTest {
         final String TEST_ARTIFACTID = "test-artifact";
         final String TEST_VERSION = "9.10.2";
         final String TEST_TYPE = "jar";
-        Artifact artifact = new DefaultArtifact(TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE,
-            TEST_TYPE, "", null);
+        Artifact artifact = new DefaultArtifact(
+                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
         artifact.setFile(file);
         return artifact;
     }
