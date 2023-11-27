@@ -37,14 +37,13 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 
-import static org.hamcrest.CoreMatchers.startsWith;
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.any;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,31 +54,25 @@ public class JarsignerSignMojoTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     public MavenProject project = mock(MavenProject.class);
-
+    private JarSigner jarSigner = mock(JarSigner.class);
     private File dummyMavenProjectDir;
-
-    private JarSigner jarSigner;
-
     private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
 
     @Before
     public void setUp() throws Exception {
         dummyMavenProjectDir = folder.newFolder("dummy-project");
-        
-        jarSigner = mock(JarSigner.class);
-        mojoTestCreator = new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, dummyMavenProjectDir, jarSigner);
+        mojoTestCreator = new MojoTestCreator<JarsignerSignMojo>(
+                JarsignerSignMojo.class, project, dummyMavenProjectDir, jarSigner);
     }
 
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-
-
         Artifact mainArtifact = mock(Artifact.class);
         File mainJarFile = new File(dummyMavenProjectDir, "my-project.jar");
-        
+
         createDummyZipFile(mainJarFile);
-        
+
         when(mainArtifact.getFile()).thenReturn(mainJarFile);
         when(project.getArtifact()).thenReturn(mainArtifact);
 
@@ -87,12 +80,7 @@ public class JarsignerSignMojoTest {
 
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
-        //when(jarSigner.execute(Mockito.isNull(JarSignerSignRequest.class))).thenReturn(null);
-
         mojo.execute();
-
-        //verify(jarSigner).execute(any(JarSignerSignRequest.class));
-        //verify(jarSigner).execute(Mockito.isNull());
 
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
         verify(jarSigner).execute(requestArgument.capture());
@@ -157,4 +145,3 @@ public class JarsignerSignMojoTest {
         }
     }
 }
-

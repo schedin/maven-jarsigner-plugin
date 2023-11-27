@@ -40,7 +40,8 @@ public class MojoTestCreator<T extends Mojo> {
     private final JarSigner jarSigner;
     private List<Field> fields;
 
-    public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner) throws Exception {
+    public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner)
+            throws Exception {
         this.clazz = clazz;
         this.project = project;
         this.projectDir = projectDir;
@@ -55,15 +56,17 @@ public class MojoTestCreator<T extends Mojo> {
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
 
-        SecDispatcher securityDispatcher = str -> str; //Simple SecDispatcher that only returns parameter
+        SecDispatcher securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
         return mojo;
     }
 
     public void setAttribute(Object instance, String fieldName, Object value) throws Exception {
-        Field field = fields.stream().filter(f -> f.getName().equals(fieldName))
-                        .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
-                            + fieldName + " in class " + instance.getClass().getName()));
+        Field field = fields.stream()
+                .filter(f -> f.getName().equals(fieldName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find field " + fieldName + " in class "
+                        + instance.getClass().getName()));
         field.setAccessible(true);
         field.set(instance, value);
     }
@@ -74,9 +77,11 @@ public class MojoTestCreator<T extends Mojo> {
             String defaultValue = defaultConfiguration.get(parameterName);
             defaultValue = substituteParameterValueVariables(defaultValue);
 
-            Field field = fields.stream().filter(f -> f.getName().equals(parameterName))
-                .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
-                    + parameterName + " in class " + mojo.getClass().getName()));
+            Field field = fields.stream()
+                    .filter(f -> f.getName().equals(parameterName))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find field " + parameterName + " in class "
+                            + mojo.getClass().getName()));
 
             field.setAccessible(true);
             Class<?> fieldType = field.getType();
@@ -89,15 +94,15 @@ public class MojoTestCreator<T extends Mojo> {
             } else if (fieldType.equals(File.class)) {
                 field.set(mojo, new File(defaultValue));
             }
-        };
+        }
     }
 
     private String substituteParameterValueVariables(String parameterValue) {
-        parameterValue = parameterValue.replaceAll(Pattern.quote("${project.basedir}"),
-            Matcher.quoteReplacement(projectDir.getPath()));
+        parameterValue = parameterValue.replaceAll(
+                Pattern.quote("${project.basedir}"), Matcher.quoteReplacement(projectDir.getPath()));
         return parameterValue;
     }
-    
+
     static List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         Class<?> currentClazz = clazz;

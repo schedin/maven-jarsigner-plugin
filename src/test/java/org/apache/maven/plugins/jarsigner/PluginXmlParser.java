@@ -18,82 +18,28 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import java.io.InputStream;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.maven.plugin.Mojo;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 public class PluginXmlParser {
     private static final String MOJO_IMPLEMENTATION_TAG = "implementation";
     private static final String MOJO_TAG = "mojo";
     private static final String CONF_DEFAULT_VALUE = "default-value";
-
-    /*
-    public static void setDefaultValues(Mojo mojo) throws Exception {
-        InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream("META-INF/maven/plugin.xml");
-        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        Document doc = dBuilder.parse(inputStream);
-        doc.getDocumentElement().normalize();
-
-        Element mojoElement = findMojoByClass(doc, mojo.getClass().getName());
-
-        if (mojoElement != null) {
-            Element configurationElement = (Element) mojoElement.getElementsByTagName("configuration").item(0);
-            
-            NodeList configurationList = configurationElement.getChildNodes();
-            for (int i = 0; i < configurationList.getLength(); i++) {
-                Node child = configurationList.item(i);
-                if (child.getNodeType() != Node.ELEMENT_NODE) {
-                    continue;
-                }
-                configurationElement = (Element) child;
-                String configurationParameterName = configurationElement.getTagName();
-                
-                List<Field> fields = getAllFields(mojo.getClass());
-                
-                if (configurationElement.hasAttribute(CONF_DEFAULT_VALUE)) {
-                    String defaultValue = configurationElement.getAttribute(CONF_DEFAULT_VALUE);
-                    Field field = fields.stream().filter(f -> f.getName().equals(configurationParameterName))
-                        .findFirst().orElseThrow(() -> new RuntimeException("Could not find field "
-                            + configurationParameterName + " in class " + mojo.getClass().getName()));
-                    
-                    field.setAccessible(true);
-                    Class<?> fieldType = field.getType();
-                    if (fieldType.equals(String.class)) {
-                        field.set(mojo, defaultValue.toString());
-                    } else if (fieldType.equals(int.class)) {
-                        field.setInt(mojo, Integer.parseInt(defaultValue));
-                    } else if (fieldType.equals(boolean.class)) {
-                        field.setBoolean(mojo, Boolean.parseBoolean(defaultValue));
-                    }
-                }
-            }
-        } else {
-            throw new RuntimeException("Mojo not found for class: " + mojo.getClass().getName());
-        }
-    }
-    */
+    private static final String PLUGIN_XML_PATH = "META-INF/maven/plugin.xml";
 
     public static Map<String, String> getMojoDefaultConfiguration(Mojo mojo) throws Exception {
         Map<String, String> defaultConfiguration = new LinkedHashMap<>();
-
-        InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream("META-INF/maven/plugin.xml");
+        InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream(PLUGIN_XML_PATH);
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
         Document doc = dBuilder.parse(inputStream);
@@ -101,10 +47,12 @@ public class PluginXmlParser {
 
         Element mojoElement = findMojoByClass(doc, mojo.getClass().getName());
         if (mojoElement == null) {
-            throw new RuntimeException("Mojo not found for class: " + mojo.getClass().getName());
+            throw new RuntimeException(
+                    "Mojo not found for class: " + mojo.getClass().getName());
         }
 
-        Element configurationElement = (Element) mojoElement.getElementsByTagName("configuration").item(0);
+        Element configurationElement =
+                (Element) mojoElement.getElementsByTagName("configuration").item(0);
         NodeList configurationList = configurationElement.getChildNodes();
         for (int i = 0; i < configurationList.getLength(); i++) {
             Node child = configurationList.item(i);
@@ -121,9 +69,8 @@ public class PluginXmlParser {
         }
         return defaultConfiguration;
     }
-    
 
-    /** Searches in every &lt;mojo&gt; element for an &lt;implementation&gt; matching the class name */ 
+    /** Searches in every &lt;mojo&gt; element for an &lt;implementation&gt; matching the class name */
     private static Element findMojoByClass(Document doc, String className) {
         NodeList mojoList = doc.getElementsByTagName(MOJO_TAG);
         for (int i = 0; i < mojoList.getLength(); i++) {
