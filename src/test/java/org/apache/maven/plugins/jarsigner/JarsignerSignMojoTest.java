@@ -25,6 +25,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -68,17 +69,10 @@ public class JarsignerSignMojoTest {
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-        Artifact mainArtifact = mock(Artifact.class);
-        File mainJarFile = new File(dummyMavenProjectDir, "my-project.jar");
-
-        createDummyZipFile(mainJarFile);
-
-        when(mainArtifact.getFile()).thenReturn(mainJarFile);
+        Artifact mainArtifact = createArtifact(createDummyZipFile(new File(dummyMavenProjectDir, "my-project.jar")));
         when(project.getArtifact()).thenReturn(mainArtifact);
-
-        JarsignerSignMojo mojo = mojoTestCreator.configure();
-
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        JarsignerSignMojo mojo = mojoTestCreator.configure();
 
         mojo.execute();
 
@@ -97,7 +91,7 @@ public class JarsignerSignMojoTest {
         assertNull(request.getMaxMemory());
         assertThat(request.getArguments()[0], startsWith("-J-Dfile.encoding="));
         assertEquals(dummyMavenProjectDir, request.getWorkingDirectory());
-        assertEquals(mainJarFile, request.getArchive());
+        assertEquals(mainArtifact.getFile(), request.getArchive());
         assertFalse(request.isProtectedAuthenticationPath());
 
         assertNull(request.getKeypass());
@@ -108,12 +102,24 @@ public class JarsignerSignMojoTest {
         assertNull(request.getCertchain());
     }
 
+    private Artifact createArtifact(File file) {
+        final String TEST_GROUPID = "org.test-group";
+        final String TEST_ARTIFACTID = "test-artifact";
+        final String TEST_VERSION = "9.10.2";
+        final String TEST_TYPE = "jar";
+        Artifact artifact = new DefaultArtifact(TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE,
+            TEST_TYPE, "", null);
+        artifact.setFile(file);
+        return artifact;
+    }
+
     /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
-    private static void createDummyZipFile(File zipFile) throws IOException {
+    private static File createDummyZipFile(File zipFile) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
             ZipEntry entry = new ZipEntry("dummy-entry.txt");
             zipOutputStream.putNextEntry(entry);
         }
+        return zipFile;
     }
 
     static class TestJavaToolResults {
