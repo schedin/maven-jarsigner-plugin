@@ -35,6 +35,7 @@ import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.AbstractJarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSigner;
+import org.apache.maven.shared.jarsigner.JarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
@@ -52,6 +53,7 @@ import org.mockito.hamcrest.MockitoHamcrest;
 
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
 import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -146,6 +148,18 @@ public class JarsignerSignMojoTest {
         verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
     }
 
+    /** Make sure that when skip is configured the Mojo will not process anything */ 
+    @Test
+    public void testSkip() throws Exception {
+        when(project.getArtifact()).thenThrow(new AssertionError("Code should not try to get any artifacts"));
+        configuration.put("skip", "true");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
+    }
+    
     /** Test that it is possible to disable processing of attached artifacts */ 
     @Test
     public void testDontProcessAttachedArtifacts() throws Exception {
@@ -165,7 +179,7 @@ public class JarsignerSignMojoTest {
         verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
     }
     
-    /** A Java project with main-, javadoc- and sources-artifacts */
+    /** A Java project with 3 types of artifacts: main, javadoc and sources */
     @Test
     public void testJavaProjectWithSourcesAndJavadoc() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
@@ -203,6 +217,9 @@ public class JarsignerSignMojoTest {
 
         File archiveToProcess = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
 
+        File workingDirectory = new File(dummyMavenProjectDir, "my_working_dir");
+        workingDirectory.mkdir();
+        
         File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
         archiveDirectory.mkdir();
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
@@ -216,19 +233,44 @@ public class JarsignerSignMojoTest {
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
         configuration.put("excludeClassifiers", "exclude_this");
         configuration.put("includeClassifiers", "classifier");
-        configuration.put("include", "*.jar");
-        configuration.put("exclude", "*_to_exclude.jar");
-
+        configuration.put("includes", "*.jar");
+        configuration.put("excludes", "*_to_exclude.jar");
         configuration.put("keypass", "mykeypass");
         configuration.put("keystore", "mykeystore");
         configuration.put("maxMemory", "mymaxmemory");
         configuration.put("processAttachedArtifacts", "true"); //Is default true, but set anyway.
-        
-
+        configuration.put("processMainArtifact", "true"); //Is default true, but set anyway.
+        configuration.put("protectedAuthenticationPath", "true");
+        configuration.put("providerArg", "myproviderarg");
+        configuration.put("providerClass", "myproviderclass");
+        configuration.put("providerName", "myprovidername");
+        configuration.put("removeExistingSignatures", "true"); // TODO: perhaps verify this seperatly?
+        configuration.put("sigfile", "mysigfile");
+        configuration.put("skip", "false"); //Is default false, but set anyway
+        configuration.put("storepass", "mystorepass");
+        configuration.put("storetype", "mystoretype");
+        configuration.put("tsa", "mytsa");
+        configuration.put("tsacert", "mytsacert");
+        configuration.put("verbose", "true");
+        configuration.put("workingDirectory", workingDirectory.getPath());
 
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
+        
+        ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
+        verify(jarSigner).execute(requestArgument.capture());
+        List<JarSignerSignRequest> requests = requestArgument.getAllValues();
+        
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName(archiveToProcess.getName())));
+        
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
+        
+        
     }
 
     static class TestArtifacts {
@@ -310,19 +352,19 @@ public class JarsignerSignMojoTest {
     }
 
     /** Hamcrest matcher(s) to match properties on a AbstractJarSignerRequest object */
-    private static class JarSignerRequestMatcher extends TypeSafeMatcher<AbstractJarSignerRequest> {
+    private static class JarSignerRequestMatcher extends TypeSafeMatcher<JarSignerSignRequest> {
         private final String predicateDescription;
         private final Object value;
-        private final Predicate<AbstractJarSignerRequest> predicate;
+        private final Predicate<JarSignerSignRequest> predicate;
 
-        private JarSignerRequestMatcher(String predicateDescription, Object value, Predicate<AbstractJarSignerRequest> predicate) {
+        private JarSignerRequestMatcher(String predicateDescription, Object value, Predicate<JarSignerSignRequest> predicate) {
             this.predicateDescription = predicateDescription;
             this.value = value;
             this.predicate = predicate;
         }
 
         @Override
-        protected boolean matchesSafely(AbstractJarSignerRequest request) {
+        protected boolean matchesSafely(JarSignerSignRequest request) {
             return predicate.test(request);
         }
 
@@ -330,11 +372,16 @@ public class JarsignerSignMojoTest {
         public void describeTo(Description description) {
             description.appendText("request that ").appendText(predicateDescription).appendValue(value);
         }
-        
+
         /** Create a matcher that matches when the request is using a specific file name for the archive */
-        static TypeSafeMatcher<AbstractJarSignerRequest> hasFileName(String expectedFileName) {
+        static TypeSafeMatcher<JarSignerSignRequest> hasFileName(String expectedFileName) {
             return new JarSignerRequestMatcher("has archive file name ", expectedFileName,
                 request -> request.getArchive().getPath().endsWith(expectedFileName));
         }
+        
+        static TypeSafeMatcher<JarSignerSignRequest> hasAlias(String alias) {
+            return new JarSignerRequestMatcher("has alias ", alias,
+                request -> request.getAlias().equals(alias));
+        }        
     }
 }
