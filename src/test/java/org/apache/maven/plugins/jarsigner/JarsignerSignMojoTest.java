@@ -21,11 +21,13 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -245,7 +247,7 @@ public class JarsignerSignMojoTest {
 
         configuration.put("alias", "myalias");
 
-        //Setting the "archive" parameter disables effect of many others, so it is tested separately!
+        //Setting "archive" parameter disables effect of many others, so it is tested separately in other test case
 
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
@@ -277,7 +279,7 @@ public class JarsignerSignMojoTest {
         mojo.execute();
         
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
-        verify(jarSigner).execute(requestArgument.capture());
+        verify(jarSigner, times(3)).execute(requestArgument.capture());
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
@@ -287,6 +289,8 @@ public class JarsignerSignMojoTest {
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
         
+        
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
         
     }
 
@@ -382,6 +386,7 @@ public class JarsignerSignMojoTest {
 
         @Override
         protected boolean matchesSafely(JarSignerSignRequest request) {
+            System.out.println(Arrays.toString(request.getArguments()));
             return predicate.test(request);
         }
 
@@ -399,6 +404,10 @@ public class JarsignerSignMojoTest {
         static TypeSafeMatcher<JarSignerSignRequest> hasAlias(String alias) {
             return new JarSignerRequestMatcher("has alias ", alias,
                 request -> request.getAlias().equals(alias));
-        }        
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasArguments(String[] arguments) {
+            return new JarSignerRequestMatcher("has arguments ", arguments,
+                request -> Objects.deepEquals(request.getArguments(), arguments));
+        }
     }
 }
