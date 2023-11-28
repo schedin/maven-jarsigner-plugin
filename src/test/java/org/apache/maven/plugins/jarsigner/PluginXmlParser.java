@@ -37,7 +37,7 @@ public class PluginXmlParser {
     private static final String CONF_DEFAULT_VALUE = "default-value";
     private static final String PLUGIN_XML_PATH = "META-INF/maven/plugin.xml";
 
-    public static Map<String, String> getMojoDefaultConfiguration(Mojo mojo) throws Exception {
+    public static Map<String, String> getMojoDefaultConfiguration(Class<? extends Mojo> mojoClass) throws Exception {
         Map<String, String> defaultConfiguration = new LinkedHashMap<>();
         InputStream inputStream = PluginXmlParser.class.getClassLoader().getResourceAsStream(PLUGIN_XML_PATH);
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -45,10 +45,10 @@ public class PluginXmlParser {
         Document doc = dBuilder.parse(inputStream);
         doc.getDocumentElement().normalize();
 
-        Element mojoElement = findMojoByClass(doc, mojo.getClass().getName());
+        Element mojoElement = findMojoByClass(doc, mojoClass.getName());
         if (mojoElement == null) {
             throw new RuntimeException(
-                    "Mojo not found for class: " + mojo.getClass().getName());
+                    "Mojo not found for class: " + mojoClass.getName());
         }
 
         Element configurationElement =

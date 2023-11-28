@@ -22,17 +22,25 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.jarsigner.AbstractJarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,8 +48,11 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.endsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -56,11 +67,12 @@ public class JarsignerSignMojoTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    public MavenProject project = mock(MavenProject.class);
+    private MavenProject project = mock(MavenProject.class);
     private JarSigner jarSigner = mock(JarSigner.class);
     private File dummyMavenProjectDir;
+    private Map<String, String> configuration = new LinkedHashMap<>();
     private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
-
+    
     @Before
     public void setUp() throws Exception {
         dummyMavenProjectDir = folder.newFolder("dummy-project");
@@ -71,10 +83,10 @@ public class JarsignerSignMojoTest {
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-        Artifact mainArtifact = createJarArtifact(createDummyZipFile(new File(dummyMavenProjectDir, "my-project.jar")));
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
-        JarsignerSignMojo mojo = mojoTestCreator.configure();
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
@@ -107,57 +119,116 @@ public class JarsignerSignMojoTest {
     /** Standard POM project with nothing special configured */
     @Test
     public void testStandardPOMProject() throws Exception {
-        Artifact mainArtifact = createPomArtifact(createDummyXMLFile(new File(dummyMavenProjectDir, "my-project.pom")));
+        Artifact mainArtifact = TestArtifacts.createPomArtifact(dummyMavenProjectDir, "my-project.pom");
         when(project.getArtifact()).thenReturn(mainArtifact);
-        JarsignerSignMojo mojo = mojoTestCreator.configure();
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
         verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
     }
+
+    /** Normal Java project, but avoid to process the main artifact (processMainArtifact to false) */ 
+    @Test
+    public void testDontProcessMainArtifact() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        configuration.put("processMainArtifact", "false");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
+    }
+
+    /** A Java project with main-, javadoc- and sources-artifacts */
+    @Test
+    public void testJavaProjectWithSourcesAndJavadoc() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        Artifact sourcesArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources", "java-source");
+        Artifact javadocArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-javadoc.jar", "javadoc", "javadoc");
+        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(sourcesArtifact, javadocArtifact));
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
+        verify(jarSigner, times(3)).execute(requestArgument.capture());
+
+        List<JarSignerSignRequest> requests = requestArgument.getAllValues();
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
+    }
     
+    
+    /** Set ever possible documented parameter (see Optional Parameters in site documentation). */
     @Test
     public void testEveryParameterSet() throws Exception {
-        // TODO: Implement this
+        // TODO: Implement this for every parameters
+        File archiveToProcess = TestArtifacts.createPomArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
+        File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
+        
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive2.jar"));
+
+        configuration.put("alias", "myalias");
+        configuration.put("archive", archiveToProcess.getPath());
+        configuration.put("archiveDirectory", archiveToProcess.getPath());
+        
+
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+        
     }
 
-    private Artifact createJarArtifact(File file) {
-        final String TEST_GROUPID = "org.test-group";
-        final String TEST_ARTIFACTID = "test-artifact";
-        final String TEST_VERSION = "9.10.2";
-        final String TEST_TYPE = "jar";
-        Artifact artifact = new DefaultArtifact(
-                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
-        artifact.setFile(file);
-        return artifact;
-    }
+    static class TestArtifacts {
+        static final String TEST_GROUPID = "org.test-group";
+        static final String TEST_ARTIFACTID = "test-artifact";
+        static final String TEST_VERSION = "9.10.2";
+        static final String TEST_TYPE = "jar";
+        static final String TEST_CLASSIFIER = "";
 
-    // TODO: Merge/refactor this method with respect to createJarArtifact()
-    private Artifact createPomArtifact(File file) {
-        final String TEST_GROUPID = "org.test-group";
-        final String TEST_ARTIFACTID = "test-artifact";
-        final String TEST_VERSION = "9.10.2";
-        final String TEST_TYPE = "pom";
-        Artifact artifact = new DefaultArtifact(
-                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
-        artifact.setFile(file);
-        return artifact;
-    }
-    
-    /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
-    private static File createDummyZipFile(File zipFile) throws IOException {
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
-            ZipEntry entry = new ZipEntry("dummy-entry.txt");
-            zipOutputStream.putNextEntry(entry);
+        static Artifact createJarArtifact(File directory, String filename) throws IOException {
+            return createJarArtifact(directory, filename, TEST_CLASSIFIER, TEST_TYPE);
         }
-        return zipFile;
+
+        public static Artifact createJarArtifact(File directory, String filename, String classifier, String type) throws IOException {
+            File file = new File(directory, filename);
+            createDummyZipFile(file);
+            Artifact artifact = new DefaultArtifact(
+                    TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, type, classifier, null);
+            artifact.setFile(file);
+            return artifact;
+        }
+
+        static Artifact createPomArtifact(File directory, String filename) throws IOException {
+            File file = new File(directory, filename);
+            createDummyXMLFile(file);
+            Artifact artifact = new DefaultArtifact(
+                    TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
+            artifact.setFile(file);
+            return artifact;
+        }
+
+        /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
+        static File createDummyZipFile(File zipFile) throws IOException {
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
+                ZipEntry entry = new ZipEntry("dummy-entry.txt");
+                zipOutputStream.putNextEntry(entry);
+            }
+            return zipFile;
+        }
+
+        /** Create a dummy XML file, for example to simulate a pom.xml file */
+        static File createDummyXMLFile(File xmlFile) throws IOException {
+            Files.write(xmlFile.toPath(), "<project/>".getBytes());
+            return xmlFile;
+        }
     }
     
-    /** Create a dummy XML file, for example to simulate a pom.xml file */
-    private static File createDummyXMLFile(File xmlFile) throws IOException {
-        Files.write(xmlFile.toPath(), "<project/>".getBytes());
-        return xmlFile;
-    }
+
 
     static class TestJavaToolResults {
         static final JavaToolResult RESULT_OK = createOk();
@@ -185,6 +256,35 @@ public class JarsignerSignMojoTest {
             commandline.setExecutable("jarsigner");
             commandline.addArguments("my-project.jar", "myalias");
             return commandline;
+        }
+    }
+    
+
+
+    private static class JarSignerRequestMatcher extends TypeSafeMatcher<AbstractJarSignerRequest> {
+        private final String predicateDescription;
+        private final Object value;
+        private final Predicate<AbstractJarSignerRequest> predicate;
+
+        private JarSignerRequestMatcher(String predicateDescription, Object value, Predicate<AbstractJarSignerRequest> predicate) {
+            this.predicateDescription = predicateDescription;
+            this.value = value;
+            this.predicate = predicate;
+        }
+
+        @Override
+        protected boolean matchesSafely(AbstractJarSignerRequest request) {
+            return predicate.test(request);
+        }
+
+        @Override
+        public void describeTo(Description description) {
+            description.appendText("request that ").appendText(predicateDescription).appendValue(value);
+        }
+        
+        static TypeSafeMatcher<AbstractJarSignerRequest> hasFileName(String expectedFileName) {
+            return new JarSignerRequestMatcher("has archive file name ", expectedFileName,
+                request -> request.getArchive().getPath().endsWith(expectedFileName));
         }
     }
 }

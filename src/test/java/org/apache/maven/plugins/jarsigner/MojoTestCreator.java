@@ -32,6 +32,11 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
+/**
+ * Creates and configures a Mojo instance to be used in testing.
+ * 
+ * @param <T> The type of Mojo
+ */
 public class MojoTestCreator<T extends Mojo> {
 
     private final Class<T> clazz;
@@ -49,7 +54,11 @@ public class MojoTestCreator<T extends Mojo> {
         fields = getAllFields(clazz);
     }
 
-    public T configure() throws Exception {
+    /**
+     * Creates and configures the Mojo instance.
+     * @param configuration user supplied configuration.
+     */
+    public T configure(Map<String, String> configuration) throws Exception {
         T mojo = clazz.getDeclaredConstructor().newInstance();
         setDefaultValues(mojo);
 
@@ -58,42 +67,50 @@ public class MojoTestCreator<T extends Mojo> {
 
         SecDispatcher securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
+        
+        for (Map.Entry<String, String> entry : configuration.entrySet()) {
+            Field field = getField(mojo, entry.getKey());
+            setFieldByStringValue(mojo, field, entry.getValue());
+        }
+
         return mojo;
     }
 
-    public void setAttribute(Object instance, String fieldName, Object value) throws Exception {
-        Field field = fields.stream()
+    private void setFieldByStringValue(Object instance, Field field, String stringValue) throws Exception {
+        field.setAccessible(true);
+        Class<?> fieldType = field.getType();
+        if (fieldType.equals(String.class)) {
+            field.set(instance, stringValue);
+        } else if (fieldType.equals(int.class)) {
+            field.setInt(instance, Integer.parseInt(stringValue));
+        } else if (fieldType.equals(boolean.class)) {
+            field.setBoolean(instance, Boolean.parseBoolean(stringValue));
+        } else if (fieldType.equals(File.class)) {
+            field.set(instance, new File(stringValue));
+        }
+    }
+
+    private Field getField(Object instance, String fieldName) {
+        return fields.stream()
                 .filter(f -> f.getName().equals(fieldName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find field " + fieldName + " in class "
                         + instance.getClass().getName()));
+    }
+
+    private void setAttribute(Object instance, String fieldName, Object value) throws Exception {
+        Field field = getField(instance, fieldName);
         field.setAccessible(true);
         field.set(instance, value);
     }
 
     private void setDefaultValues(Mojo mojo) throws Exception {
-        Map<String, String> defaultConfiguration = PluginXmlParser.getMojoDefaultConfiguration(mojo);
+        Map<String, String> defaultConfiguration = PluginXmlParser.getMojoDefaultConfiguration(mojo.getClass());
         for (String parameterName : defaultConfiguration.keySet()) {
             String defaultValue = defaultConfiguration.get(parameterName);
             defaultValue = substituteParameterValueVariables(defaultValue);
-
-            Field field = fields.stream()
-                    .filter(f -> f.getName().equals(parameterName))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Could not find field " + parameterName + " in class "
-                            + mojo.getClass().getName()));
-
-            field.setAccessible(true);
-            Class<?> fieldType = field.getType();
-            if (fieldType.equals(String.class)) {
-                field.set(mojo, defaultValue.toString());
-            } else if (fieldType.equals(int.class)) {
-                field.setInt(mojo, Integer.parseInt(defaultValue));
-            } else if (fieldType.equals(boolean.class)) {
-                field.setBoolean(mojo, Boolean.parseBoolean(defaultValue));
-            } else if (fieldType.equals(File.class)) {
-                field.set(mojo, new File(defaultValue));
-            }
+            Field field = getField(mojo, parameterName);
+            setFieldByStringValue(mojo, field, defaultValue.toString()); 
         }
     }
 
