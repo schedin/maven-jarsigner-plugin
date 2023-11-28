@@ -46,9 +46,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.mockito.hamcrest.MockitoHamcrest;
 
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
 import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -56,6 +60,7 @@ import static org.hamcrest.CoreMatchers.endsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -141,6 +146,25 @@ public class JarsignerSignMojoTest {
         verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
     }
 
+    /** Test that it is possible to disable processing of attached artifacts */ 
+    @Test
+    public void testDontProcessAttachedArtifacts() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        configuration.put("processAttachedArtifacts", "false");
+        
+        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources", "java-source")));
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        // Make sure that only the main artifact has been processed, but not the attached artifact
+        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project.jar")));
+        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
+    }
+    
     /** A Java project with main-, javadoc- and sources-artifacts */
     @Test
     public void testJavaProjectWithSourcesAndJavadoc() throws Exception {
@@ -162,25 +186,49 @@ public class JarsignerSignMojoTest {
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
     }
-    
-    
-    /** Set ever possible documented parameter (see Optional Parameters in site documentation). */
+
+    /** Set every possible documented parameter (see Optional Parameters in site documentation). */
     @Test
-    public void testEveryParameterSet() throws Exception {
+    public void testEveryParameter() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+
         // TODO: Implement this for every parameters
-        File archiveToProcess = TestArtifacts.createPomArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+
+        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-classifier1.jar", "classifier1");
+        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-classifier2.jar", "classifier2");
+        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-different_not_included.jar", "different_not_included");
+        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-exclude_this.jar", "exclude_this_classifier");
+
+        File archiveToProcess = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
+
         File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
-        
+        archiveDirectory.mkdir();
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive2.jar"));
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive_to_exclude.jar"));
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "not_this.par"));
 
         configuration.put("alias", "myalias");
         configuration.put("archive", archiveToProcess.getPath());
         configuration.put("archiveDirectory", archiveToProcess.getPath());
+        configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
+        configuration.put("excludeClassifiers", "exclude_this");
+        configuration.put("includeClassifiers", "classifier");
+        configuration.put("include", "*.jar");
+        configuration.put("exclude", "*_to_exclude.jar");
+
+        configuration.put("keypass", "mykeypass");
+        configuration.put("keystore", "mykeystore");
+        configuration.put("maxMemory", "mymaxmemory");
+        configuration.put("processAttachedArtifacts", "true"); //Is default true, but set anyway.
         
 
+
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
-        
+
+        mojo.execute();
     }
 
     static class TestArtifacts {
@@ -191,9 +239,13 @@ public class JarsignerSignMojoTest {
         static final String TEST_CLASSIFIER = "";
 
         static Artifact createJarArtifact(File directory, String filename) throws IOException {
-            return createJarArtifact(directory, filename, TEST_CLASSIFIER, TEST_TYPE);
+            return createJarArtifact(directory, filename, TEST_CLASSIFIER);
         }
 
+        public static Artifact createJarArtifact(File directory, String filename, String classifier) throws IOException {
+            return createJarArtifact(directory, filename, classifier, TEST_TYPE);
+        }
+        
         public static Artifact createJarArtifact(File directory, String filename, String classifier, String type) throws IOException {
             File file = new File(directory, filename);
             createDummyZipFile(file);
@@ -227,8 +279,6 @@ public class JarsignerSignMojoTest {
             return xmlFile;
         }
     }
-    
-
 
     static class TestJavaToolResults {
         static final JavaToolResult RESULT_OK = createOk();
@@ -258,9 +308,8 @@ public class JarsignerSignMojoTest {
             return commandline;
         }
     }
-    
 
-
+    /** Hamcrest matcher(s) to match properties on a AbstractJarSignerRequest object */
     private static class JarSignerRequestMatcher extends TypeSafeMatcher<AbstractJarSignerRequest> {
         private final String predicateDescription;
         private final Object value;
@@ -282,6 +331,7 @@ public class JarsignerSignMojoTest {
             description.appendText("request that ").appendText(predicateDescription).appendValue(value);
         }
         
+        /** Create a matcher that matches when the request is using a specific file name for the archive */
         static TypeSafeMatcher<AbstractJarSignerRequest> hasFileName(String expectedFileName) {
             return new JarSignerRequestMatcher("has archive file name ", expectedFileName,
                 request -> request.getArchive().getPath().endsWith(expectedFileName));

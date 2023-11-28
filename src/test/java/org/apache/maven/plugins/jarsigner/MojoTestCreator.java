@@ -30,6 +30,8 @@ import java.util.regex.Pattern;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 /**
@@ -38,6 +40,8 @@ import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
  * @param <T> The type of Mojo
  */
 public class MojoTestCreator<T extends Mojo> {
+    
+    private final Logger logger = LoggerFactory.getLogger(MojoTestCreator.class);
 
     private final Class<T> clazz;
     private final MavenProject project;
@@ -87,6 +91,13 @@ public class MojoTestCreator<T extends Mojo> {
             field.setBoolean(instance, Boolean.parseBoolean(stringValue));
         } else if (fieldType.equals(File.class)) {
             field.set(instance, new File(stringValue));
+        } else if (fieldType.equals(String[].class)) {
+            String[] values = stringValue.split(",");
+            field.set(instance, values);
+        } else {
+            if (! stringValue.startsWith("${")) {
+                logger.warn("Not implemented support to set of field of type {} to value {}", fieldType.getSimpleName(), stringValue);
+            }
         }
     }
 
