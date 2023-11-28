@@ -21,6 +21,7 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -46,6 +47,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,7 +71,7 @@ public class JarsignerSignMojoTest {
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-        Artifact mainArtifact = createArtifact(createDummyZipFile(new File(dummyMavenProjectDir, "my-project.jar")));
+        Artifact mainArtifact = createJarArtifact(createDummyZipFile(new File(dummyMavenProjectDir, "my-project.jar")));
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         JarsignerSignMojo mojo = mojoTestCreator.configure();
@@ -102,12 +104,24 @@ public class JarsignerSignMojoTest {
         assertNull(request.getCertchain());
     }
 
+    /** Standard POM project with nothing special configured */
+    @Test
+    public void testStandardPOMProject() throws Exception {
+        Artifact mainArtifact = createPomArtifact(createDummyXMLFile(new File(dummyMavenProjectDir, "my-project.pom")));
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        JarsignerSignMojo mojo = mojoTestCreator.configure();
+
+        mojo.execute();
+
+        verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
+    }
+    
     @Test
     public void testEveryParameterSet() throws Exception {
         // TODO: Implement this
     }
 
-    private Artifact createArtifact(File file) {
+    private Artifact createJarArtifact(File file) {
         final String TEST_GROUPID = "org.test-group";
         final String TEST_ARTIFACTID = "test-artifact";
         final String TEST_VERSION = "9.10.2";
@@ -118,6 +132,18 @@ public class JarsignerSignMojoTest {
         return artifact;
     }
 
+    // TODO: Merge/refactor this method with respect to createJarArtifact()
+    private Artifact createPomArtifact(File file) {
+        final String TEST_GROUPID = "org.test-group";
+        final String TEST_ARTIFACTID = "test-artifact";
+        final String TEST_VERSION = "9.10.2";
+        final String TEST_TYPE = "pom";
+        Artifact artifact = new DefaultArtifact(
+                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
+        artifact.setFile(file);
+        return artifact;
+    }
+    
     /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
     private static File createDummyZipFile(File zipFile) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
@@ -125,6 +151,12 @@ public class JarsignerSignMojoTest {
             zipOutputStream.putNextEntry(entry);
         }
         return zipFile;
+    }
+    
+    /** Create a dummy XML file, for example to simulate a pom.xml file */
+    private static File createDummyXMLFile(File xmlFile) throws IOException {
+        Files.write(xmlFile.toPath(), "<project/>".getBytes());
+        return xmlFile;
     }
 
     static class TestJavaToolResults {
