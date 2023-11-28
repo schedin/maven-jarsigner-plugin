@@ -159,7 +159,24 @@ public class JarsignerSignMojoTest {
 
         verify(jarSigner, times(0)).execute(any()); // Should not try to sign anything
     }
-    
+
+    /** Only process the specified archive, don't process the main artifact nor the attached. */ 
+    @Test
+    public void testArchive() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        File archiveToProcess = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
+        configuration.put("archive", archiveToProcess.getPath());
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);        
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        // Make sure that only the archiveToProcess has been processed, but not the main artifact
+        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project.jar")));
+        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("archive-to-process.jar")));
+    }
+
     /** Test that it is possible to disable processing of attached artifacts */ 
     @Test
     public void testDontProcessAttachedArtifacts() throws Exception {
@@ -215,7 +232,6 @@ public class JarsignerSignMojoTest {
         TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-different_not_included.jar", "different_not_included");
         TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-exclude_this.jar", "exclude_this_classifier");
 
-        File archiveToProcess = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
 
         File workingDirectory = new File(dummyMavenProjectDir, "my_working_dir");
         workingDirectory.mkdir();
@@ -228,8 +244,10 @@ public class JarsignerSignMojoTest {
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "not_this.par"));
 
         configuration.put("alias", "myalias");
-        configuration.put("archive", archiveToProcess.getPath());
-        configuration.put("archiveDirectory", archiveToProcess.getPath());
+
+        //Setting the "archive" parameter disables effect of many others, so it is tested separately!
+
+        configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
         configuration.put("excludeClassifiers", "exclude_this");
         configuration.put("includeClassifiers", "classifier");
@@ -263,7 +281,6 @@ public class JarsignerSignMojoTest {
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName(archiveToProcess.getName())));
         
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
