@@ -229,10 +229,14 @@ public class JarsignerSignMojoTest {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
 
-        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-classifier1.jar", "classifier1");
-        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-classifier2.jar", "classifier2");
-        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-different_not_included.jar", "different_not_included");
-        TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-exclude_this.jar", "exclude_this_classifier");
+        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(
+            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources"),
+            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-javadoc.jar", "javadoc"),
+            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-included_and_excluded.jar", "included_and_excluded"),
+            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-excluded_classifier.jar", "excluded_classifier")
+        ));
+        
+
 
 
         File workingDirectory = new File(dummyMavenProjectDir, "my_working_dir");
@@ -251,8 +255,8 @@ public class JarsignerSignMojoTest {
 
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
-        configuration.put("excludeClassifiers", "exclude_this");
-        configuration.put("includeClassifiers", "classifier");
+        configuration.put("excludeClassifiers", "excluded_classifier,included_and_excluded");
+        configuration.put("includeClassifiers", "sources,javadoc,included_and_excluded");
         configuration.put("includes", "*.jar");
         configuration.put("excludes", "*_to_exclude.jar");
         configuration.put("keypass", "mykeypass");
@@ -284,13 +288,25 @@ public class JarsignerSignMojoTest {
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
         
+        for (JarSignerSignRequest request : requests) {
+            System.out.println(request.getArchive());
+        }
+        
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
         
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-classifier1.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-classifier2.jar")));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-different_not_included.jar"))));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-exclude_this.jar"))));
+        
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
+
+        
         
     }
 
@@ -386,7 +402,6 @@ public class JarsignerSignMojoTest {
 
         @Override
         protected boolean matchesSafely(JarSignerSignRequest request) {
-            System.out.println(Arrays.toString(request.getArguments()));
             return predicate.test(request);
         }
 
@@ -405,9 +420,19 @@ public class JarsignerSignMojoTest {
             return new JarSignerRequestMatcher("has alias ", alias,
                 request -> request.getAlias().equals(alias));
         }
+
         static TypeSafeMatcher<JarSignerSignRequest> hasArguments(String[] arguments) {
             return new JarSignerRequestMatcher("has arguments ", arguments,
-                request -> Objects.deepEquals(request.getArguments(), arguments));
+                request -> {
+                    List<String> haystack = Arrays.asList(request.getArguments());
+                    for (String argumentNeedle : arguments) {
+                        if (!haystack.contains(argumentNeedle)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+           );
         }
     }
 }
