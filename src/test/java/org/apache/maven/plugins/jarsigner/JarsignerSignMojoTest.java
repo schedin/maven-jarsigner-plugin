@@ -43,6 +43,7 @@ import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
 import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
 import org.junit.Rule;
@@ -283,7 +284,7 @@ public class JarsignerSignMojoTest {
         mojo.execute();
         
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
-        verify(jarSigner, times(3)).execute(requestArgument.capture());
+        verify(jarSigner, times(5)).execute(requestArgument.capture());
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
@@ -291,23 +292,24 @@ public class JarsignerSignMojoTest {
         for (JarSignerSignRequest request : requests) {
             System.out.println(request.getArchive());
         }
-        
+
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
         
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-classifier1.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-classifier2.jar")));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-different_not_included.jar"))));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-exclude_this.jar"))));
-        
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-included_and_excluded.jar"))));
+        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-excluded_classifier.jar"))));
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
-
         
-        
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeypass("mykeypass")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeystore("mykeystore")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasMaxMemory("mymaxmemory")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProtectedAuthenticationPath(true)));
     }
 
     static class TestArtifacts {
@@ -400,6 +402,7 @@ public class JarsignerSignMojoTest {
             this.predicate = predicate;
         }
 
+
         @Override
         protected boolean matchesSafely(JarSignerSignRequest request) {
             return predicate.test(request);
@@ -434,5 +437,25 @@ public class JarsignerSignMojoTest {
                 }
            );
         }
+
+        static TypeSafeMatcher<JarSignerSignRequest> hasKeypass(String keypass) {
+            return new JarSignerRequestMatcher("has keypass ", keypass,
+                request -> request.getKeypass().equals(keypass));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasKeystore(String keystore) {
+            return new JarSignerRequestMatcher("has keystore ", keystore,
+                request -> request.getKeystore().equals(keystore));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasMaxMemory(String maxMemory) {
+            return new JarSignerRequestMatcher("has maxMemory ", maxMemory,
+                request -> request.getMaxMemory().equals(maxMemory));
+        }        
+        static TypeSafeMatcher<JarSignerSignRequest> hasProtectedAuthenticationPath(boolean protectedAuthenticationPath) {
+            return new JarSignerRequestMatcher("has protectedAuthenticationPath ", protectedAuthenticationPath,
+                request -> request.getP().equals(maxMemory));
+        }        
+
+        
     }
 }
+
