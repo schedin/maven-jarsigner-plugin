@@ -220,7 +220,10 @@ public class JarsignerSignMojoTest {
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
     }
 
-    /** Set every possible documented parameter (see Optional Parameters in site documentation). */
+    /**
+     * Set every possible documented parameter (that does not interfere too much with testing of other parameters. See
+     * Optional Parameters in site documentation).
+     */
     @Test
     public void testEveryParameter() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
@@ -253,6 +256,7 @@ public class JarsignerSignMojoTest {
 
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
+        configuration.put("certchain", "mycertchain);
         configuration.put("excludeClassifiers", "excluded_classifier,included_and_excluded");
         configuration.put("includeClassifiers", "sources,javadoc,included_and_excluded");
         configuration.put("includes", "*.jar");
@@ -266,7 +270,7 @@ public class JarsignerSignMojoTest {
         configuration.put("providerArg", "myproviderarg");
         configuration.put("providerClass", "myproviderclass");
         configuration.put("providerName", "myprovidername");
-        configuration.put("removeExistingSignatures", "true"); // TODO: perhaps verify this seperatly?
+        configuration.put("removeExistingSignatures", "true");
         configuration.put("sigfile", "mysigfile");
         configuration.put("skip", "false"); //Is default false, but set anyway
         configuration.put("storepass", "mystorepass");
@@ -285,6 +289,7 @@ public class JarsignerSignMojoTest {
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
+        
 
 //        for (JarSignerSignRequest request : requests) {
 //            System.out.println(request.getArchive());
@@ -310,7 +315,14 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderArg("myproviderarg")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderClass("myproviderclass")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderName("myprovidername")));
-        assertFalse(JarSignerUtil.isArchiveSigned(previouslySignedArchive));
+        assertFalse(JarSignerUtil.isArchiveSigned(previouslySignedArchive)); // Make sure previous signing is gone
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasSigfile("mysigfile")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasStorepass("mystorepass")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasStoretype("mystoretype")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsa("mytsa")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsacert("mytsacert")));
+        
+        
     }
 
     static class TestArtifacts {
@@ -478,6 +490,28 @@ public class JarsignerSignMojoTest {
             return new JarSignerRequestMatcher("has providerName ", providerName,
                 request -> request.getProviderName().equals(providerName));
         }
+        static TypeSafeMatcher<JarSignerSignRequest> hasSigfile(String sigfile) {
+            return new JarSignerRequestMatcher("has sigfile ", sigfile,
+                request -> request.getSigfile().equals(sigfile));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasStorepass(String storepass) {
+            return new JarSignerRequestMatcher("has storepass ", storepass,
+                request -> request.getStorepass().equals(storepass));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasStoretype(String storetype) {
+            return new JarSignerRequestMatcher("has storetype ", storetype,
+                request -> request.getStoretype().equals(storetype));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasTsa(String tsa) {
+            return new JarSignerRequestMatcher("has tsa ", tsa,
+                request -> request.getTsaLocation().equals(tsa));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasTsacert(String tsacert) {
+            return new JarSignerRequestMatcher("has tsacert ", tsacert,
+                request -> request.getTsaAlias().equals(tsacert));
+        }
+
+        
     }
 }
 
