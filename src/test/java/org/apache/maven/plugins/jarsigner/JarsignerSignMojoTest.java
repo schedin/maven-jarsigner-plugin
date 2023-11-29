@@ -39,6 +39,7 @@ import org.apache.maven.shared.jarsigner.AbstractJarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
@@ -60,11 +61,9 @@ import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.endsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
@@ -246,10 +245,16 @@ public class JarsignerSignMojoTest {
         File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
         archiveDirectory.mkdir();
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
-        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive2.jar"));
+        
+        File previouslySignedArchive = TestArtifacts.createDummyZipFile(new File(archiveDirectory, "previously_signed_archive.jar"));
+        assertTrue("previously_signed_archive.jar should be detected as a signed file before executing the Mojo", JarSignerUtil.isArchiveSigned(previouslySignedArchive));
+        
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive_to_exclude.jar"));
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "not_this.par"));
 
+
+        
+        
         configuration.put("alias", "myalias");
 
         //Setting "archive" parameter disables effect of many others, so it is tested separately in other test case
@@ -288,10 +293,10 @@ public class JarsignerSignMojoTest {
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
-        
-        for (JarSignerSignRequest request : requests) {
-            System.out.println(request.getArchive());
-        }
+
+//        for (JarSignerSignRequest request : requests) {
+//            System.out.println(request.getArchive());
+//        }
 
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
@@ -310,6 +315,12 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeystore("mykeystore")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasMaxMemory("mymaxmemory")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProtectedAuthenticationPath(true)));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderArg("myproviderarg")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderClass("myproviderclass")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderName("myprovidername")));
+        
+        
+        
     }
 
     static class TestArtifacts {
@@ -452,10 +463,20 @@ public class JarsignerSignMojoTest {
         }        
         static TypeSafeMatcher<JarSignerSignRequest> hasProtectedAuthenticationPath(boolean protectedAuthenticationPath) {
             return new JarSignerRequestMatcher("has protectedAuthenticationPath ", protectedAuthenticationPath,
-                request -> request.getP().equals(maxMemory));
-        }        
-
-        
+                request -> request.isProtectedAuthenticationPath() == protectedAuthenticationPath);
+        }   
+        static TypeSafeMatcher<JarSignerSignRequest> hasProviderArg(String providerArg) {
+            return new JarSignerRequestMatcher("has providerArg ", providerArg,
+                request -> request.getProviderArg().equals(providerArg));
+        }     
+        static TypeSafeMatcher<JarSignerSignRequest> hasProviderClass(String providerClass) {
+            return new JarSignerRequestMatcher("has providerClass ", providerClass,
+                request -> request.getProviderClass().equals(providerClass));
+        }     
+        static TypeSafeMatcher<JarSignerSignRequest> hasProviderName(String providerName) {
+            return new JarSignerRequestMatcher("has providerName ", providerName,
+                request -> request.getProviderName().equals(providerName));
+        }
     }
 }
 
