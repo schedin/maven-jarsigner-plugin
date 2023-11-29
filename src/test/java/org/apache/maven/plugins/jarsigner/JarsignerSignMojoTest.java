@@ -235,9 +235,6 @@ public class JarsignerSignMojoTest {
             TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-included_and_excluded.jar", "included_and_excluded"),
             TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-excluded_classifier.jar", "excluded_classifier")
         ));
-        
-
-
 
         File workingDirectory = new File(dummyMavenProjectDir, "my_working_dir");
         workingDirectory.mkdir();
@@ -245,16 +242,11 @@ public class JarsignerSignMojoTest {
         File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
         archiveDirectory.mkdir();
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
-        
-        File previouslySignedArchive = TestArtifacts.createDummyZipFile(new File(archiveDirectory, "previously_signed_archive.jar"));
+        File previouslySignedArchive = TestArtifacts.createDummySignedJarFile(new File(archiveDirectory, "previously_signed_archive.jar"));
         assertTrue("previously_signed_archive.jar should be detected as a signed file before executing the Mojo", JarSignerUtil.isArchiveSigned(previouslySignedArchive));
-        
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive_to_exclude.jar"));
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "not_this.par"));
 
-
-        
-        
         configuration.put("alias", "myalias");
 
         //Setting "archive" parameter disables effect of many others, so it is tested separately in other test case
@@ -299,7 +291,7 @@ public class JarsignerSignMojoTest {
 //        }
 
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive2.jar")));
+        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("previously_signed_archive.jar")));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
         
@@ -318,9 +310,7 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderArg("myproviderarg")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderClass("myproviderclass")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderName("myprovidername")));
-        
-        
-        
+        assertFalse(JarSignerUtil.isArchiveSigned(previouslySignedArchive));
     }
 
     static class TestArtifacts {
@@ -365,6 +355,17 @@ public class JarsignerSignMojoTest {
             return zipFile;
         }
 
+        /** Create a dummy signed JAR, enough to pass JarSignerUtil.isArchiveSigned() */
+        static File createDummySignedJarFile(File jarFile) throws IOException {
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(jarFile))) {
+                ZipEntry entry = new ZipEntry("dummy-entry.txt");
+                zipOutputStream.putNextEntry(entry);
+                zipOutputStream.putNextEntry(new ZipEntry("META-INF/dummy.RSA"));
+            }
+            
+            return jarFile;
+        }
+        
         /** Create a dummy XML file, for example to simulate a pom.xml file */
         static File createDummyXMLFile(File xmlFile) throws IOException {
             Files.write(xmlFile.toPath(), "<project/>".getBytes());
