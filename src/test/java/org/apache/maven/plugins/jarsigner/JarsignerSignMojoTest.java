@@ -121,7 +121,7 @@ public class JarsignerSignMojoTest {
         assertNull(request.getCertchain());
     }
 
-    /** When the jarsigner returns a non-zero exit code  */
+    /** When jarsigner command invocation returns a non-zero exit code  */
     @Test
     public void testJarsignerNonZeroExitCode() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
@@ -136,7 +136,7 @@ public class JarsignerSignMojoTest {
         assertThat(mojoException.getMessage(), containsString(RESULT_ERROR.getCommandline().toString()));
     }
 
-    /** When JavaTool throws an exception on execute(). */
+    /** When JavaTool throws an exception on execute() (when executing jarsigner). */
     @Test
     public void testJarsignerFailedToExecute() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
