@@ -37,10 +37,7 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.jarsigner.JarSignerUtil;
-import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
-import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
-import org.apache.maven.shared.utils.cli.shell.Shell;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
 import org.hamcrest.Description;
@@ -52,8 +49,8 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.hamcrest.MockitoHamcrest;
 
-import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
-import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_ERROR;
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -454,35 +451,6 @@ public class JarsignerSignMojoTest {
         static File createDummyXMLFile(File xmlFile) throws IOException {
             Files.write(xmlFile.toPath(), "<project/>".getBytes());
             return xmlFile;
-        }
-    }
-
-    static class TestJavaToolResults {
-        static final JavaToolResult RESULT_OK = createOk();
-        static final JavaToolResult RESULT_ERROR = createError();
-
-        private static JavaToolResult createOk() {
-            JavaToolResult result = new JavaToolResult();
-            result.setExitCode(0);
-            result.setExecutionException(null);
-            result.setCommandline(getSimpleCommandline());
-            return result;
-        }
-
-        private static JavaToolResult createError() {
-            JavaToolResult result = new JavaToolResult();
-            result.setExitCode(1);
-            result.setExecutionException(null);
-            result.setCommandline(getSimpleCommandline());
-            return result;
-        }
-
-        private static Commandline getSimpleCommandline() {
-            Shell shell = new Shell();
-            Commandline commandline = new Commandline(shell);
-            commandline.setExecutable("jarsigner");
-            commandline.addArguments("my-project.jar", "myalias");
-            return commandline;
         }
     }
 
