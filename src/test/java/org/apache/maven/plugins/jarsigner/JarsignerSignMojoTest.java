@@ -382,6 +382,20 @@ public class JarsignerSignMojoTest {
         verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasKeypass("mykeypass")));
         verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasStorepass("mystorepass")));
     }
+
+    /** Make sure that a customer file encoding to jarsigner can be set and that it does not get duplicated */
+    @Test
+    public void testSetCustomFileEncoding() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("arguments", "-J-Dfile.encoding=ISO-8859-1,argument2");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasArguments(new String[]{"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
+    }
     
     static class TestArtifacts {
         static final String TEST_GROUPID = "org.test-group";
