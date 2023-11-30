@@ -39,6 +39,8 @@ import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
+import org.apache.maven.toolchain.Toolchain;
+import org.apache.maven.toolchain.ToolchainManager;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
@@ -164,7 +166,7 @@ public class JarsignerSignMojoTest {
 
         mojo.execute();
 
-        // Make sure that only the archiveToProcess has been processed, but not the main artifact
+        // Make sure only the jar pointed by "archive" has been processed, but not the main artifact
         verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project.jar")));
         verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("archive-to-process.jar")));
     }
@@ -218,7 +220,6 @@ public class JarsignerSignMojoTest {
     public void testBig() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
-        // TODO: Implement this for every parameters
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
 
@@ -282,10 +283,6 @@ public class JarsignerSignMojoTest {
 
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
 
-//        for (JarSignerSignRequest request : requests) {
-//            System.out.println(request.getArchive());
-//        }
-
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
         assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("previously_signed_archive.jar")));
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
@@ -313,8 +310,25 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsa("mytsa")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsacert("mytsacert")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasVerbose(true)));
+    }
 
+    /** Make sure that if a custom ToolchainManager is set on the Mojo, it is used by jarSigner */
+    @Test
+    public void testToolchainManager() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
+        Toolchain toolchain = mock(Toolchain.class);
+        ToolchainManager toolchainManager = mock(ToolchainManager.class);
+        when(toolchainManager.getToolchainFromBuildContext(any(), any())).thenReturn(toolchain);
+        mojoTestCreator.setToolchainManager(toolchainManager);
+
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner).setToolchain(toolchain);
     }
 
     static class TestArtifacts {

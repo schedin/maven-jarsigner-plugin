@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
+import org.apache.maven.toolchain.ToolchainManager;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
@@ -47,7 +48,9 @@ public class MojoTestCreator<T extends Mojo> {
     private final MavenProject project;
     private final File projectDir;
     private final JarSigner jarSigner;
+    private ToolchainManager toolchainManager;
     private List<Field> fields;
+
 
     public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner)
             throws Exception {
@@ -58,6 +61,10 @@ public class MojoTestCreator<T extends Mojo> {
         fields = getAllFields(clazz);
     }
 
+    public void setToolchainManager(ToolchainManager toolchainManager) {
+        this.toolchainManager = toolchainManager;
+    }
+    
     /**
      * Creates and configures the Mojo instance.
      * @param configuration user supplied configuration.
@@ -68,6 +75,9 @@ public class MojoTestCreator<T extends Mojo> {
 
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
+        if (toolchainManager != null) {
+            setAttribute(mojo, "toolchainManager", toolchainManager);
+        }
 
         SecDispatcher securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
