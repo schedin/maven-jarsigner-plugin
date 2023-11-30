@@ -38,6 +38,7 @@ import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.cli.Commandline;
+import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.cli.shell.Shell;
 import org.apache.maven.toolchain.Toolchain;
@@ -120,9 +121,9 @@ public class JarsignerSignMojoTest {
         assertNull(request.getCertchain());
     }
 
-    /** Simple jarsigner fails scenario */
+    /** When the jarsigner returns a non-zero exit code  */
     @Test
-    public void testStandardJavaProjectSignFailes() throws Exception {
+    public void testJarsignerNonZeroExitCode() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR);
@@ -133,6 +134,20 @@ public class JarsignerSignMojoTest {
         });
         assertThat(mojoException.getMessage(), containsString(String.valueOf(RESULT_ERROR.getExitCode())));
         assertThat(mojoException.getMessage(), containsString(RESULT_ERROR.getCommandline().toString()));
+    }
+
+    /** When JavaTool throws an exception on execute(). */
+    @Test
+    public void testJarsignerFailedToExecute() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenThrow(new JavaToolException("test failure"));
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        MojoExecutionException mojoException = assertThrows(MojoExecutionException.class, () -> {
+            mojo.execute();
+        });
+        assertThat(mojoException.getMessage(), containsString("test failure"));
     }
 
     /** Standard POM project with nothing special configured */
