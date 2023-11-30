@@ -26,14 +26,12 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
@@ -376,7 +374,7 @@ public class JarsignerSignMojoTest {
         configuration.put("keypass", "mykeypass_encrypted");
         configuration.put("storepass", "mystorepass_encrypted");
 
-        mojoTestCreator.setSecDispatcher(str -> str.replaceFirst("_encrypted", "")); // "Decrypts" a password
+        mojoTestCreator.setSecDispatcher(str -> str.replace("_encrypted", "")); // "Decrypts" a password
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
