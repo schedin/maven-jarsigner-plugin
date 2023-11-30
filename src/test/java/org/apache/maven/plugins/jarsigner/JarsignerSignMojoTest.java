@@ -121,7 +121,7 @@ public class JarsignerSignMojoTest {
         assertNull(request.getSigfile());
         assertNull(request.getTsaLocation());
         assertNull(request.getTsaAlias());
-        assertNull(request.getSignedjar()); // TODO: Current JarsignerSignMojo does not have support for this parameter.
+        assertNull(request.getSignedjar()); // Current JarsignerSignMojo does not have support for this parameter.
         assertNull(request.getCertchain());
     }
 
@@ -221,11 +221,11 @@ public class JarsignerSignMojoTest {
     }
 
     /**
-     * Set every possible documented parameter (that does not interfere too much with testing of other parameters. See
-     * Optional Parameters in site documentation).
+     * Set most possible documented parameter (that does not interfere too much with testing of other parameters). See
+     * Optional Parameters in site documentation.
      */
     @Test
-    public void testEveryParameter() throws Exception {
+    public void testBig() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
         // TODO: Implement this for every parameters
@@ -256,7 +256,7 @@ public class JarsignerSignMojoTest {
 
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
-        configuration.put("certchain", "mycertchain);
+        configuration.put("certchain", "mycertchain");
         configuration.put("excludeClassifiers", "excluded_classifier,included_and_excluded");
         configuration.put("includeClassifiers", "sources,javadoc,included_and_excluded");
         configuration.put("includes", "*.jar");
@@ -272,6 +272,8 @@ public class JarsignerSignMojoTest {
         configuration.put("providerName", "myprovidername");
         configuration.put("removeExistingSignatures", "true");
         configuration.put("sigfile", "mysigfile");
+        //configuration.put("signedjar", "mysignedjar"); // Current JarsignerSignMojo does not support this parameter.
+
         configuration.put("skip", "false"); //Is default false, but set anyway
         configuration.put("storepass", "mystorepass");
         configuration.put("storetype", "mystoretype");
@@ -289,7 +291,6 @@ public class JarsignerSignMojoTest {
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
-        
 
 //        for (JarSignerSignRequest request : requests) {
 //            System.out.println(request.getArchive());
@@ -307,7 +308,7 @@ public class JarsignerSignMojoTest {
         assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-excluded_classifier.jar"))));
         
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
-        
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasCertchain("mycertchain")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeypass("mykeypass")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeystore("mykeystore")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasMaxMemory("mymaxmemory")));
@@ -321,6 +322,7 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasStoretype("mystoretype")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsa("mytsa")));
         assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsacert("mytsacert")));
+        assertThat(requests, everyItem(JarSignerRequestMatcher.hasVerbose(true)));
         
         
     }
@@ -510,8 +512,14 @@ public class JarsignerSignMojoTest {
             return new JarSignerRequestMatcher("has tsacert ", tsacert,
                 request -> request.getTsaAlias().equals(tsacert));
         }
-
-        
+        static TypeSafeMatcher<JarSignerSignRequest> hasCertchain(String certchain) {
+            return new JarSignerRequestMatcher("has certchain ", certchain,
+                request -> request.getCertchain().getPath().equals(certchain));
+        }
+        static TypeSafeMatcher<JarSignerSignRequest> hasVerbose(boolean verbose) {
+            return new JarSignerRequestMatcher("has verbose ", verbose,
+                request -> request.isVerbose() == verbose);
+        }        
     }
 }
 
