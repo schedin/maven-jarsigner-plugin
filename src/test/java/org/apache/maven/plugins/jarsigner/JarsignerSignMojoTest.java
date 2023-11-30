@@ -26,12 +26,14 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
@@ -364,6 +366,26 @@ public class JarsignerSignMojoTest {
         verify(jarSigner).setToolchain(toolchain);
     }
 
+    /** Make sure the Mojo correctly invokes the SecDispatcher for decryption of passwords */
+    @Test
+    public void testSecurityDispatcher() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+
+        configuration.put("keypass", "mykeypass");
+        configuration.put("storepass", "mystorepass");
+
+        //SecDistpatcher that reverse inputted the String
+        mojoTestCreator.setSecDispatcher(str -> new StringBuilder(str).reverse().toString());
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+    
+        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasKeypass("ssapyekym")));
+        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasStorepass("ssaperotsym")));
+    }
+    
     static class TestArtifacts {
         static final String TEST_GROUPID = "org.test-group";
         static final String TEST_ARTIFACTID = "test-artifact";
@@ -453,7 +475,7 @@ public class JarsignerSignMojoTest {
         }
     }
 
-    /** Hamcrest matcher(s) to match properties on a AbstractJarSignerRequest object */
+    /** Hamcrest matcher(s) to match properties on a jarsigner request object */
     private static class JarSignerRequestMatcher extends TypeSafeMatcher<JarSignerSignRequest> {
         private final String predicateDescription;
         private final Object value;
@@ -464,7 +486,6 @@ public class JarsignerSignMojoTest {
             this.value = value;
             this.predicate = predicate;
         }
-
 
         @Override
         protected boolean matchesSafely(JarSignerSignRequest request) {
