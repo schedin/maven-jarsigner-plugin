@@ -373,17 +373,16 @@ public class JarsignerSignMojoTest {
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
-        configuration.put("keypass", "mykeypass");
-        configuration.put("storepass", "mystorepass");
+        configuration.put("keypass", "mykeypass_encrypted");
+        configuration.put("storepass", "mystorepass_encrypted");
 
-        //SecDistpatcher that reverse inputted the String
-        mojoTestCreator.setSecDispatcher(str -> new StringBuilder(str).reverse().toString());
+        mojoTestCreator.setSecDispatcher(str -> str.replaceFirst("_encrypted", "")); // "Decrypts" a password
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
-    
-        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasKeypass("ssapyekym")));
-        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasStorepass("ssaperotsym")));
+
+        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasKeypass("mykeypass")));
+        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasStorepass("mystorepass")));
     }
     
     static class TestArtifacts {
