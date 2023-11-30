@@ -32,6 +32,7 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -51,6 +52,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.hamcrest.MockitoHamcrest;
 
 import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_OK;
+import static org.apache.maven.plugins.jarsigner.JarsignerSignMojoTest.TestJavaToolResults.RESULT_ERROR;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.not;
@@ -115,6 +118,21 @@ public class JarsignerSignMojoTest {
         assertNull(request.getTsaAlias());
         assertNull(request.getSignedjar()); // Current JarsignerSignMojo does not have support for this parameter.
         assertNull(request.getCertchain());
+    }
+
+    /** Simple jarsigner fails scenario */
+    @Test
+    public void testStandardJavaProjectSignFailes() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR);
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        MojoExecutionException mojoException = assertThrows(MojoExecutionException.class, () -> {
+            mojo.execute();
+        });
+        assertThat(mojoException.getMessage(), containsString(String.valueOf(RESULT_ERROR.getExitCode())));
+        assertThat(mojoException.getMessage(), containsString(RESULT_ERROR.getCommandline().toString()));
     }
 
     /** Standard POM project with nothing special configured */
