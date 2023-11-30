@@ -49,8 +49,8 @@ public class MojoTestCreator<T extends Mojo> {
     private final File projectDir;
     private final JarSigner jarSigner;
     private ToolchainManager toolchainManager;
+    private SecDispatcher securityDispatcher;
     private List<Field> fields;
-
 
     public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner)
             throws Exception {
@@ -58,13 +58,19 @@ public class MojoTestCreator<T extends Mojo> {
         this.project = project;
         this.projectDir = projectDir;
         this.jarSigner = jarSigner;
+        
+        securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
         fields = getAllFields(clazz);
     }
 
     public void setToolchainManager(ToolchainManager toolchainManager) {
         this.toolchainManager = toolchainManager;
     }
-    
+
+    public void setSecDispatcher(SecDispatcher securityDispatcher) {
+        this.securityDispatcher = securityDispatcher;
+    }
+
     /**
      * Creates and configures the Mojo instance.
      * @param configuration user supplied configuration.
@@ -75,12 +81,10 @@ public class MojoTestCreator<T extends Mojo> {
 
         setAttribute(mojo, "project", project);
         setAttribute(mojo, "jarSigner", jarSigner);
+        setAttribute(mojo, "securityDispatcher", securityDispatcher);
         if (toolchainManager != null) {
             setAttribute(mojo, "toolchainManager", toolchainManager);
         }
-
-        SecDispatcher securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
-        setAttribute(mojo, "securityDispatcher", securityDispatcher);
         
         for (Map.Entry<String, String> entry : configuration.entrySet()) {
             Field field = getField(mojo, entry.getKey());
