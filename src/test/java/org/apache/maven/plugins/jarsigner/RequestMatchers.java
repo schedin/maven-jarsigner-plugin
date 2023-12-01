@@ -34,18 +34,18 @@ class RequestMatchers {
         private final String predicateDescription;
         private final Object value;
         private final Predicate<AbstractJarSignerRequest> predicate;
-    
+
         private AbstractJarSignerRequestMatcher(String predicateDescription, Object value, Predicate<AbstractJarSignerRequest> predicate) {
             this.predicateDescription = predicateDescription;
             this.value = value;
             this.predicate = predicate;
         }
-    
+
         @Override
         protected boolean matchesSafely(AbstractJarSignerRequest request) {
             return predicate.test(request);
         }
-    
+
         @Override
         public void describeTo(Description description) {
             description.appendText("request that ").appendText(predicateDescription).appendValue(value);
@@ -73,7 +73,7 @@ class RequestMatchers {
             description.appendText("request that ").appendText(predicateDescription).appendValue(value);
         }
     }
-    
+
     /** Create a matcher that matches when the request is using a specific file name for the archive */
     static <T extends AbstractJarSignerRequest> TypeSafeMatcher<T> hasFileName(String expectedFileName) {
         return new AbstractJarSignerRequestMatcher<T>("has archive file name ", expectedFileName,
@@ -137,14 +137,14 @@ class RequestMatchers {
         return new AbstractJarSignerRequestMatcher<T>("has verbose ", verbose,
             request -> request.isVerbose() == verbose);
     }
-    
-    /* ************************************ JarSignerSignRequest specific mathers ************************************/
-    
+
+    /* ************************************ JarSignerSignRequest specific matchers ************************************/
+
     static TypeSafeMatcher<JarSignerSignRequest> hasKeypass(String keypass) {
         return new JarSignerSignRequestMatcher("has keypass ", keypass,
             request -> request.getKeypass().equals(keypass));
     }
-    
+
     static TypeSafeMatcher<JarSignerSignRequest> hasSigfile(String sigfile) {
         return new JarSignerSignRequestMatcher("has sigfile ", sigfile,
             request -> request.getSigfile().equals(sigfile));

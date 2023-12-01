@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -40,8 +39,6 @@ import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -197,8 +194,8 @@ public class JarsignerSignMojoTest {
         mojo.execute();
 
         // Make sure only the jar pointed by "archive" has been processed, but not the main artifact
-        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project.jar")));
-        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("archive-to-process.jar")));
+        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project.jar")));
+        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("archive-to-process.jar")));
     }
 
     /** Test that it is possible to disable processing of attached artifacts */
@@ -216,8 +213,8 @@ public class JarsignerSignMojoTest {
         mojo.execute();
 
         // Make sure that only the main artifact has been processed, but not the attached artifact
-        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project.jar")));
-        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
+        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project.jar")));
+        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project-sources.jar")));
     }
 
     /** A Java project with 3 types of artifacts: main, javadoc and sources */
@@ -237,9 +234,9 @@ public class JarsignerSignMojoTest {
         verify(jarSigner, times(3)).execute(requestArgument.capture());
 
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-sources.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-javadoc.jar")));
     }
 
     /**
@@ -311,37 +308,62 @@ public class JarsignerSignMojoTest {
         verify(jarSigner, times(5)).execute(requestArgument.capture());
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
 
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasAlias("myalias")));
+        assertThat(requests, everyItem(RequestMatchers.hasAlias("myalias")));
 
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("archive1.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("previously_signed_archive.jar")));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("archive_to_exclude.jar"))));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("not_this.par"))));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("archive1.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("previously_signed_archive.jar")));
+        assertThat(requests, hasItem(not(RequestMatchers.hasFileName("archive_to_exclude.jar"))));
+        assertThat(requests, hasItem(not(RequestMatchers.hasFileName("not_this.par"))));
 
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-sources.jar")));
-        assertThat(requests, hasItem(JarSignerRequestMatcher.hasFileName("my-project-javadoc.jar")));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-included_and_excluded.jar"))));
-        assertThat(requests, hasItem(not(JarSignerRequestMatcher.hasFileName("my-project-excluded_classifier.jar"))));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-sources.jar")));
+        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-javadoc.jar")));
+        assertThat(requests, hasItem(not(RequestMatchers.hasFileName("my-project-included_and_excluded.jar"))));
+        assertThat(requests, hasItem(not(RequestMatchers.hasFileName("my-project-excluded_classifier.jar"))));
 
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasCertchain("mycertchain")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeypass("mykeypass")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasKeystore("mykeystore")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasMaxMemory("mymaxmemory")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProtectedAuthenticationPath(true)));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderArg("myproviderarg")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderClass("myproviderclass")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasProviderName("myprovidername")));
+        assertThat(requests, everyItem(RequestMatchers.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
+        assertThat(requests, everyItem(RequestMatchers.hasCertchain("mycertchain")));
+        assertThat(requests, everyItem(RequestMatchers.hasKeypass("mykeypass")));
+        assertThat(requests, everyItem(RequestMatchers.hasKeystore("mykeystore")));
+        assertThat(requests, everyItem(RequestMatchers.hasMaxMemory("mymaxmemory")));
+        assertThat(requests, everyItem(RequestMatchers.hasProtectedAuthenticationPath(true)));
+        assertThat(requests, everyItem(RequestMatchers.hasProviderArg("myproviderarg")));
+        assertThat(requests, everyItem(RequestMatchers.hasProviderClass("myproviderclass")));
+        assertThat(requests, everyItem(RequestMatchers.hasProviderName("myprovidername")));
         assertFalse(JarSignerUtil.isArchiveSigned(previouslySignedArchive)); // Make sure previous signing is gone
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasSigfile("mysigfile")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasStorepass("mystorepass")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasStoretype("mystoretype")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsa("mytsa")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasTsacert("mytsacert")));
-        assertThat(requests, everyItem(JarSignerRequestMatcher.hasVerbose(true)));
+        assertThat(requests, everyItem(RequestMatchers.hasSigfile("mysigfile")));
+        assertThat(requests, everyItem(RequestMatchers.hasStorepass("mystorepass")));
+        assertThat(requests, everyItem(RequestMatchers.hasStoretype("mystoretype")));
+        assertThat(requests, everyItem(RequestMatchers.hasTsa("mytsa")));
+        assertThat(requests, everyItem(RequestMatchers.hasTsacert("mytsacert")));
+        assertThat(requests, everyItem(RequestMatchers.hasVerbose(true)));
+        
+        
+        
+        //TODO Remove this START
+//        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-excluded_classifier.jar")));
+//        assertThat(requests, everyItem(RequestMatchers.hasFileName("my-project-excluded_classifier.jar")));
+
+//        assertThat(requests, hasItem(RequestMatchers.hasTsacert("cert1")));
+//        assertThat(requests, everyItemBetter(RequestMatchers.hasTsacert("cert1")));
+
+        
+        //TODO Remove this END
     }
 
+//    public static <T> org.hamcrest.Matcher<java.lang.Iterable<? super T>> hasItem(org.hamcrest.Matcher<? super T> itemMatcher) {
+//        return org.hamcrest.core.IsCollectionContaining.<T>hasItem(itemMatcher);
+//      }
+//    public static <U> org.hamcrest.Matcher<java.lang.Iterable<U>> everyItem(org.hamcrest.Matcher<U> itemMatcher) {
+//        return org.hamcrest.core.Every.<U>everyItem(itemMatcher);
+//      }
+    
+//    public static <T> Matcher<Iterable<? super T>> everyItemBetter(final Matcher<? super T> itemMatcher) {
+//        TypeSafeDiagnosingMatcher<Iterable<T>> v = (TypeSafeDiagnosingMatcher<Iterable<T>>) new org.hamcrest.core.Every<T>(itemMatcher);
+//        Matcher<Iterable<? super T>> v2 = (Matcher<Iterable<T>>) v;
+//        return v2;
+//    }
+    
     /** Make sure that if a custom ToolchainManager is set on the Mojo, it is used by jarSigner */
     @Test
     public void testToolchainManager() throws Exception {
@@ -376,8 +398,8 @@ public class JarsignerSignMojoTest {
 
         mojo.execute();
 
-        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasKeypass("mykeypass")));
-        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasStorepass("mystorepass")));
+        verify(jarSigner).execute(MockitoHamcrest.argThat(RequestMatchers.hasKeypass("mykeypass")));
+        verify(jarSigner).execute(MockitoHamcrest.argThat(RequestMatchers.hasStorepass("mystorepass")));
     }
 
     /** Make sure that a customer file encoding to jarsigner can be set and that it does not get duplicated */
@@ -391,7 +413,7 @@ public class JarsignerSignMojoTest {
 
         mojo.execute();
 
-        verify(jarSigner).execute(MockitoHamcrest.argThat(JarSignerRequestMatcher.hasArguments(new String[]{"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
+        verify(jarSigner).execute(MockitoHamcrest.argThat(RequestMatchers.hasArguments(new String[]{"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
     }
     
     static class TestArtifacts {
@@ -454,109 +476,6 @@ public class JarsignerSignMojoTest {
         }
     }
 
-    /** Hamcrest matcher(s) to match properties on a jarsigner request object */
-    private static class JarSignerRequestMatcher extends TypeSafeMatcher<JarSignerSignRequest> {
-        private final String predicateDescription;
-        private final Object value;
-        private final Predicate<JarSignerSignRequest> predicate;
 
-        private JarSignerRequestMatcher(String predicateDescription, Object value, Predicate<JarSignerSignRequest> predicate) {
-            this.predicateDescription = predicateDescription;
-            this.value = value;
-            this.predicate = predicate;
-        }
-
-        @Override
-        protected boolean matchesSafely(JarSignerSignRequest request) {
-            return predicate.test(request);
-        }
-
-        @Override
-        public void describeTo(Description description) {
-            description.appendText("request that ").appendText(predicateDescription).appendValue(value);
-        }
-
-        /** Create a matcher that matches when the request is using a specific file name for the archive */
-        static TypeSafeMatcher<JarSignerSignRequest> hasFileName(String expectedFileName) {
-            return new JarSignerRequestMatcher("has archive file name ", expectedFileName,
-                request -> request.getArchive().getPath().endsWith(expectedFileName));
-        }
-
-        static TypeSafeMatcher<JarSignerSignRequest> hasAlias(String alias) {
-            return new JarSignerRequestMatcher("has alias ", alias,
-                request -> request.getAlias().equals(alias));
-        }
-
-        static TypeSafeMatcher<JarSignerSignRequest> hasArguments(String[] arguments) {
-            return new JarSignerRequestMatcher("has arguments ", arguments,
-                request -> {
-                    List<String> haystack = Arrays.asList(request.getArguments());
-                    for (String argumentNeedle : arguments) {
-                        if (!haystack.contains(argumentNeedle)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-           );
-        }
-
-        static TypeSafeMatcher<JarSignerSignRequest> hasKeypass(String keypass) {
-            return new JarSignerRequestMatcher("has keypass ", keypass,
-                request -> request.getKeypass().equals(keypass));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasKeystore(String keystore) {
-            return new JarSignerRequestMatcher("has keystore ", keystore,
-                request -> request.getKeystore().equals(keystore));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasMaxMemory(String maxMemory) {
-            return new JarSignerRequestMatcher("has maxMemory ", maxMemory,
-                request -> request.getMaxMemory().equals(maxMemory));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasProtectedAuthenticationPath(boolean protectedAuthenticationPath) {
-            return new JarSignerRequestMatcher("has protectedAuthenticationPath ", protectedAuthenticationPath,
-                request -> request.isProtectedAuthenticationPath() == protectedAuthenticationPath);
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasProviderArg(String providerArg) {
-            return new JarSignerRequestMatcher("has providerArg ", providerArg,
-                request -> request.getProviderArg().equals(providerArg));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasProviderClass(String providerClass) {
-            return new JarSignerRequestMatcher("has providerClass ", providerClass,
-                request -> request.getProviderClass().equals(providerClass));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasProviderName(String providerName) {
-            return new JarSignerRequestMatcher("has providerName ", providerName,
-                request -> request.getProviderName().equals(providerName));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasSigfile(String sigfile) {
-            return new JarSignerRequestMatcher("has sigfile ", sigfile,
-                request -> request.getSigfile().equals(sigfile));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasStorepass(String storepass) {
-            return new JarSignerRequestMatcher("has storepass ", storepass,
-                request -> request.getStorepass().equals(storepass));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasStoretype(String storetype) {
-            return new JarSignerRequestMatcher("has storetype ", storetype,
-                request -> request.getStoretype().equals(storetype));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasTsa(String tsa) {
-            return new JarSignerRequestMatcher("has tsa ", tsa,
-                request -> request.getTsaLocation().equals(tsa));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasTsacert(String tsacert) {
-            return new JarSignerRequestMatcher("has tsacert ", tsacert,
-                request -> request.getTsaAlias().equals(tsacert));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasCertchain(String certchain) {
-            return new JarSignerRequestMatcher("has certchain ", certchain,
-                request -> request.getCertchain().getPath().equals(certchain));
-        }
-        static TypeSafeMatcher<JarSignerSignRequest> hasVerbose(boolean verbose) {
-            return new JarSignerRequestMatcher("has verbose ", verbose,
-                request -> request.isVerbose() == verbose);
-        }
-    }
 }
 
