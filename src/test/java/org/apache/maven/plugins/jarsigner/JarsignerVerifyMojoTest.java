@@ -19,21 +19,14 @@
 package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
-import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
-import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.jarsigner.JarSignerVerifyRequest;
-import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
-import org.apache.maven.toolchain.Toolchain;
-import org.apache.maven.toolchain.ToolchainManager;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,16 +37,12 @@ import org.mockito.hamcrest.MockitoHamcrest;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.everyItem;
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -106,6 +95,20 @@ public class JarsignerVerifyMojoTest {
         assertFalse(request.isCerts()); // Only verify specific parameter
     }
 
+    /** Invocing jarsigner with the -certs parameter */ 
+    @Test
+    public void testCertsTrue() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerVerifyRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("certs", "true");
+        JarsignerVerifyMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner).execute(argThat(request -> ((JarSignerVerifyRequest) request).isCerts()));
+    }
+    
     /** When the jarsigner signing verification check tells there is a problem with the signing of the file */
     @Test
     public void testVerifyFailure() throws Exception {
@@ -152,6 +155,4 @@ public class JarsignerVerifyMojoTest {
         });
         assertThat(mojoException.getMessage(), containsString(mainArtifact.getFile().getPath()));
     }
-
 }
-
