@@ -35,6 +35,17 @@ class TestArtifacts {
     static final String TEST_TYPE = "jar";
     static final String TEST_CLASSIFIER = "";
 
+    static Artifact createArtifact(File file) throws IOException {
+        return createArtifact(file, TEST_TYPE, TEST_CLASSIFIER);
+    }
+
+    static Artifact createArtifact(File file, String type, String classifier) throws IOException {
+        Artifact artifact = new DefaultArtifact(
+            TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, type, classifier, null);
+        artifact.setFile(file);
+        return artifact;
+    }
+
     static Artifact createJarArtifact(File directory, String filename) throws IOException {
         return createJarArtifact(directory, filename, TEST_CLASSIFIER);
     }
@@ -46,19 +57,13 @@ class TestArtifacts {
     public static Artifact createJarArtifact(File directory, String filename, String classifier, String type) throws IOException {
         File file = new File(directory, filename);
         createDummyZipFile(file);
-        Artifact artifact = new DefaultArtifact(
-                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, type, classifier, null);
-        artifact.setFile(file);
-        return artifact;
+        return createArtifact(file, type, classifier);
     }
 
     static Artifact createPomArtifact(File directory, String filename) throws IOException {
         File file = new File(directory, filename);
         createDummyXMLFile(file);
-        Artifact artifact = new DefaultArtifact(
-                TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
-        artifact.setFile(file);
-        return artifact;
+        return createArtifact(file, TEST_TYPE, "");
     }
 
     /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
