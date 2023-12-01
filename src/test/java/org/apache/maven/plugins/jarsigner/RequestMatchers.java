@@ -18,7 +18,6 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
@@ -28,8 +27,12 @@ import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
-/** Hamcrest matcher(s) to match properties on a jarsigner request object */
+/**
+ * Hamcrest matcher(s) to match properties on a JarSignerRequest request instances
+ */
 class RequestMatchers {
+
+    /** Matcher for parameters common for JarSignerRequest instances */
     private static class AbstractJarSignerRequestMatcher<T extends AbstractJarSignerRequest> extends TypeSafeMatcher<T> {
         private final String predicateDescription;
         private final Object value;
@@ -52,6 +55,7 @@ class RequestMatchers {
         }
     }
 
+    /** Matcher for parameters specific to JarSignerSignRequest instances */
     private static class JarSignerSignRequestMatcher extends TypeSafeMatcher<JarSignerSignRequest> {
         private final String predicateDescription;
         private final Object value;

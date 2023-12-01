@@ -19,18 +19,12 @@
 package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
@@ -337,33 +331,8 @@ public class JarsignerSignMojoTest {
         assertThat(requests, everyItem(RequestMatchers.hasTsa("mytsa")));
         assertThat(requests, everyItem(RequestMatchers.hasTsacert("mytsacert")));
         assertThat(requests, everyItem(RequestMatchers.hasVerbose(true)));
-        
-        
-        
-        //TODO Remove this START
-//        assertThat(requests, hasItem(RequestMatchers.hasFileName("my-project-excluded_classifier.jar")));
-//        assertThat(requests, everyItem(RequestMatchers.hasFileName("my-project-excluded_classifier.jar")));
-
-//        assertThat(requests, hasItem(RequestMatchers.hasTsacert("cert1")));
-//        assertThat(requests, everyItemBetter(RequestMatchers.hasTsacert("cert1")));
-
-        
-        //TODO Remove this END
     }
 
-//    public static <T> org.hamcrest.Matcher<java.lang.Iterable<? super T>> hasItem(org.hamcrest.Matcher<? super T> itemMatcher) {
-//        return org.hamcrest.core.IsCollectionContaining.<T>hasItem(itemMatcher);
-//      }
-//    public static <U> org.hamcrest.Matcher<java.lang.Iterable<U>> everyItem(org.hamcrest.Matcher<U> itemMatcher) {
-//        return org.hamcrest.core.Every.<U>everyItem(itemMatcher);
-//      }
-    
-//    public static <T> Matcher<Iterable<? super T>> everyItemBetter(final Matcher<? super T> itemMatcher) {
-//        TypeSafeDiagnosingMatcher<Iterable<T>> v = (TypeSafeDiagnosingMatcher<Iterable<T>>) new org.hamcrest.core.Every<T>(itemMatcher);
-//        Matcher<Iterable<? super T>> v2 = (Matcher<Iterable<T>>) v;
-//        return v2;
-//    }
-    
     /** Make sure that if a custom ToolchainManager is set on the Mojo, it is used by jarSigner */
     @Test
     public void testToolchainManager() throws Exception {
@@ -415,67 +384,6 @@ public class JarsignerSignMojoTest {
 
         verify(jarSigner).execute(MockitoHamcrest.argThat(RequestMatchers.hasArguments(new String[]{"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
     }
-    
-    static class TestArtifacts {
-        static final String TEST_GROUPID = "org.test-group";
-        static final String TEST_ARTIFACTID = "test-artifact";
-        static final String TEST_VERSION = "9.10.2";
-        static final String TEST_TYPE = "jar";
-        static final String TEST_CLASSIFIER = "";
-
-        static Artifact createJarArtifact(File directory, String filename) throws IOException {
-            return createJarArtifact(directory, filename, TEST_CLASSIFIER);
-        }
-
-        public static Artifact createJarArtifact(File directory, String filename, String classifier) throws IOException {
-            return createJarArtifact(directory, filename, classifier, TEST_TYPE);
-        }
-
-        public static Artifact createJarArtifact(File directory, String filename, String classifier, String type) throws IOException {
-            File file = new File(directory, filename);
-            createDummyZipFile(file);
-            Artifact artifact = new DefaultArtifact(
-                    TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, type, classifier, null);
-            artifact.setFile(file);
-            return artifact;
-        }
-
-        static Artifact createPomArtifact(File directory, String filename) throws IOException {
-            File file = new File(directory, filename);
-            createDummyXMLFile(file);
-            Artifact artifact = new DefaultArtifact(
-                    TEST_GROUPID, TEST_ARTIFACTID, TEST_VERSION, Artifact.SCOPE_COMPILE, TEST_TYPE, "", null);
-            artifact.setFile(file);
-            return artifact;
-        }
-
-        /** Create a dummy JAR/ZIP file, enough to pass ZipInputStream.getNextEntry() */
-        static File createDummyZipFile(File zipFile) throws IOException {
-            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(zipFile))) {
-                ZipEntry entry = new ZipEntry("dummy-entry.txt");
-                zipOutputStream.putNextEntry(entry);
-            }
-            return zipFile;
-        }
-
-        /** Create a dummy signed JAR, enough to pass JarSignerUtil.isArchiveSigned() */
-        static File createDummySignedJarFile(File jarFile) throws IOException {
-            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(jarFile))) {
-                ZipEntry entry = new ZipEntry("dummy-entry.txt");
-                zipOutputStream.putNextEntry(entry);
-                zipOutputStream.putNextEntry(new ZipEntry("META-INF/dummy.RSA"));
-            }
-
-            return jarFile;
-        }
-
-        /** Create a dummy XML file, for example to simulate a pom.xml file */
-        static File createDummyXMLFile(File xmlFile) throws IOException {
-            Files.write(xmlFile.toPath(), "<project/>".getBytes());
-            return xmlFile;
-        }
-    }
-
 
 }
 
