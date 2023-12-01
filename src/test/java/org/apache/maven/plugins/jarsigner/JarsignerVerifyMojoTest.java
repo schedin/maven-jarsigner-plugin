@@ -34,8 +34,8 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.hamcrest.MockitoHamcrest;
 
-import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -61,7 +61,7 @@ public class JarsignerVerifyMojoTest {
     public void setUp() throws Exception {
         dummyMavenProjectDir = folder.newFolder("dummy-project");
         mojoTestCreator = new MojoTestCreator<JarsignerVerifyMojo>(
-                        JarsignerVerifyMojo.class, project, dummyMavenProjectDir, jarSigner);
+                JarsignerVerifyMojo.class, project, dummyMavenProjectDir, jarSigner);
     }
 
     /** Standard Java project with nothing special configured */
@@ -95,7 +95,7 @@ public class JarsignerVerifyMojoTest {
         assertFalse(request.isCerts()); // Only verify specific parameter
     }
 
-    /** Invocing jarsigner with the -certs parameter */ 
+    /** Invocing jarsigner with the -certs parameter */
     @Test
     public void testCertsTrue() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
@@ -108,7 +108,7 @@ public class JarsignerVerifyMojoTest {
 
         verify(jarSigner).execute(argThat(request -> ((JarSignerVerifyRequest) request).isCerts()));
     }
-    
+
     /** When the jarsigner signing verification check tells there is a problem with the signing of the file */
     @Test
     public void testVerifyFailure() throws Exception {
@@ -121,7 +121,9 @@ public class JarsignerVerifyMojoTest {
             mojo.execute();
         });
         assertThat(mojoException.getMessage(), containsString(String.valueOf(RESULT_ERROR.getExitCode())));
-        assertThat(mojoException.getMessage(), containsString(RESULT_ERROR.getCommandline().toString()));
+        assertThat(
+                mojoException.getMessage(),
+                containsString(RESULT_ERROR.getCommandline().toString()));
     }
 
     /** When setting errorWhenNotSigned, for file that has existing signing (should not fail) */
@@ -153,6 +155,8 @@ public class JarsignerVerifyMojoTest {
         MojoExecutionException mojoException = assertThrows(MojoExecutionException.class, () -> {
             mojo.execute();
         });
-        assertThat(mojoException.getMessage(), containsString(mainArtifact.getFile().getPath()));
+        assertThat(
+                mojoException.getMessage(),
+                containsString(mainArtifact.getFile().getPath()));
     }
 }

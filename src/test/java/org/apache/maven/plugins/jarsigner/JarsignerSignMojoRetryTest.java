@@ -32,8 +32,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -69,7 +69,8 @@ public class JarsignerSignMojoRetryTest {
 
         mojo.execute();
 
-        verify(jarSigner).execute(argThat(request -> request.getArchive().getPath().endsWith("my-project.jar")));
+        verify(jarSigner)
+                .execute(argThat(request -> request.getArchive().getPath().endsWith("my-project.jar")));
     }
 
     @Test
@@ -89,7 +90,9 @@ public class JarsignerSignMojoRetryTest {
     public void testSignFailureOnFirstSuccessOnSecond() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
-        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR).thenReturn(RESULT_OK);
+        when(jarSigner.execute(any(JarSignerSignRequest.class)))
+                .thenReturn(RESULT_ERROR)
+                .thenReturn(RESULT_OK);
         configuration.put("maxTries", "2");
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
@@ -102,7 +105,9 @@ public class JarsignerSignMojoRetryTest {
     public void testSignFailureOnFirstFailureOnSecond() throws Exception {
         Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
-        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR).thenReturn(RESULT_ERROR);
+        when(jarSigner.execute(any(JarSignerSignRequest.class)))
+                .thenReturn(RESULT_ERROR)
+                .thenReturn(RESULT_ERROR);
         configuration.put("maxTries", "2");
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
         assertThrows(MojoExecutionException.class, () -> {

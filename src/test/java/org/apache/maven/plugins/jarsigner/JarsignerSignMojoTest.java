@@ -40,8 +40,8 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.hamcrest.MockitoHamcrest;
 
-import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -62,21 +62,21 @@ public class JarsignerSignMojoTest {
 
     private MavenProject project = mock(MavenProject.class);
     private JarSigner jarSigner = mock(JarSigner.class);
-    private File dummyMavenProjectDir;
+    private File projectDir;
     private Map<String, String> configuration = new LinkedHashMap<>();
     private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
 
     @Before
     public void setUp() throws Exception {
-        dummyMavenProjectDir = folder.newFolder("dummy-project");
-        mojoTestCreator = new MojoTestCreator<JarsignerSignMojo>(
-                JarsignerSignMojo.class, project, dummyMavenProjectDir, jarSigner);
+        projectDir = folder.newFolder("dummy-project");
+        mojoTestCreator =
+                new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, projectDir, jarSigner);
     }
 
     /** Standard Java project with nothing special configured */
     @Test
     public void testStandardJavaProject() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -97,7 +97,7 @@ public class JarsignerSignMojoTest {
         assertNull(request.getProviderArg());
         assertNull(request.getMaxMemory());
         assertThat(request.getArguments()[0], startsWith("-J-Dfile.encoding="));
-        assertEquals(dummyMavenProjectDir, request.getWorkingDirectory());
+        assertEquals(projectDir, request.getWorkingDirectory());
         assertEquals(mainArtifact.getFile(), request.getArchive());
         assertFalse(request.isProtectedAuthenticationPath());
 
@@ -112,7 +112,7 @@ public class JarsignerSignMojoTest {
     /** When jarsigner command invocation returns a non-zero exit code  */
     @Test
     public void testJarsignerNonZeroExitCode() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -121,13 +121,15 @@ public class JarsignerSignMojoTest {
             mojo.execute();
         });
         assertThat(mojoException.getMessage(), containsString(String.valueOf(RESULT_ERROR.getExitCode())));
-        assertThat(mojoException.getMessage(), containsString(RESULT_ERROR.getCommandline().toString()));
+        assertThat(
+                mojoException.getMessage(),
+                containsString(RESULT_ERROR.getCommandline().toString()));
     }
 
     /** When JavaTool throws an exception on execute() (when executing jarsigner). */
     @Test
     public void testJarsignerFailedToExecute() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenThrow(new JavaToolException("test failure"));
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -141,7 +143,7 @@ public class JarsignerSignMojoTest {
     /** Standard POM project with nothing special configured */
     @Test
     public void testStandardPOMProject() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createPomArtifact(dummyMavenProjectDir, "my-project.pom");
+        Artifact mainArtifact = TestArtifacts.createPomArtifact(projectDir, "my-project.pom");
         when(project.getArtifact()).thenReturn(mainArtifact);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
@@ -153,7 +155,7 @@ public class JarsignerSignMojoTest {
     /** Normal Java project, but avoid to process the main artifact (processMainArtifact to false) */
     @Test
     public void testDontProcessMainArtifact() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         configuration.put("processMainArtifact", "false");
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -178,10 +180,10 @@ public class JarsignerSignMojoTest {
     /** Only process the specified archive, don't process the main artifact nor the attached. */
     @Test
     public void testArchive() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
-        File archiveToProcess = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "archive-to-process.jar").getFile();
-        configuration.put("archive", archiveToProcess.getPath());
+        File archiveFile = TestArtifacts.createDummyZipFile(new File(projectDir, "archive.jar"));
+        configuration.put("archive", archiveFile.getPath());
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
@@ -189,17 +191,19 @@ public class JarsignerSignMojoTest {
 
         // Make sure only the jar pointed by "archive" has been processed, but not the main artifact
         verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project.jar")));
-        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("archive-to-process.jar")));
+        verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("archive.jar")));
     }
 
     /** Test that it is possible to disable processing of attached artifacts */
     @Test
     public void testDontProcessAttachedArtifacts() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         configuration.put("processAttachedArtifacts", "false");
 
-        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources", "java-source")));
+        when(project.getAttachedArtifacts())
+                .thenReturn(Arrays.asList(TestArtifacts.createJarArtifact(
+                        projectDir, "my-project-sources.jar", "sources", "java-source")));
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -208,17 +212,19 @@ public class JarsignerSignMojoTest {
 
         // Make sure that only the main artifact has been processed, but not the attached artifact
         verify(jarSigner, times(1)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project.jar")));
-        verify(jarSigner, times(0)).execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project-sources.jar")));
+        verify(jarSigner, times(0))
+                .execute(MockitoHamcrest.argThat(RequestMatchers.hasFileName("my-project-sources.jar")));
     }
 
     /** A Java project with 3 types of artifacts: main, javadoc and sources */
     @Test
     public void testJavaProjectWithSourcesAndJavadoc() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
-        Artifact sourcesArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources", "java-source");
-        Artifact javadocArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-javadoc.jar", "javadoc", "javadoc");
-        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(sourcesArtifact, javadocArtifact));
+        when(project.getAttachedArtifacts())
+                .thenReturn(Arrays.asList(
+                        TestArtifacts.createJarArtifact(projectDir, "my-project-sources.jar", "sources", "java-source"),
+                        TestArtifacts.createJarArtifact(projectDir, "my-project-javadoc.jar", "javadoc", "javadoc")));
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
@@ -241,30 +247,35 @@ public class JarsignerSignMojoTest {
     public void testBig() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
 
-        when(project.getAttachedArtifacts()).thenReturn(Arrays.asList(
-            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-sources.jar", "sources"),
-            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-javadoc.jar", "javadoc"),
-            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-included_and_excluded.jar", "included_and_excluded"),
-            TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project-excluded_classifier.jar", "excluded_classifier")
-        ));
+        when(project.getAttachedArtifacts())
+                .thenReturn(Arrays.asList(
+                        TestArtifacts.createJarArtifact(projectDir, "my-project-sources.jar", "sources"),
+                        TestArtifacts.createJarArtifact(projectDir, "my-project-javadoc.jar", "javadoc"),
+                        TestArtifacts.createJarArtifact(
+                                projectDir, "my-project-included_and_excluded.jar", "included_and_excluded"),
+                        TestArtifacts.createJarArtifact(
+                                projectDir, "my-project-excluded_classifier.jar", "excluded_classifier")));
 
-        File workingDirectory = new File(dummyMavenProjectDir, "my_working_dir");
+        File workingDirectory = new File(projectDir, "my_working_dir");
         workingDirectory.mkdir();
 
-        File archiveDirectory = new File(dummyMavenProjectDir, "my_archive_dir");
+        File archiveDirectory = new File(projectDir, "my_archive_dir");
         archiveDirectory.mkdir();
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
-        File previouslySignedArchive = TestArtifacts.createDummySignedJarFile(new File(archiveDirectory, "previously_signed_archive.jar"));
-        assertTrue("previously_signed_archive.jar should be detected as a signed file before executing the Mojo", JarSignerUtil.isArchiveSigned(previouslySignedArchive));
+        File previouslySignedArchive =
+                TestArtifacts.createDummySignedJarFile(new File(archiveDirectory, "previously_signed_archive.jar"));
+        assertTrue(
+                "previously_signed_archive.jar should be detected as a signed file before executing the Mojo",
+                JarSignerUtil.isArchiveSigned(previouslySignedArchive));
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive_to_exclude.jar"));
         TestArtifacts.createDummyZipFile(new File(archiveDirectory, "not_this.par"));
 
         configuration.put("alias", "myalias");
 
-        //Setting "archive" parameter disables effect of many others, so it is tested separately in other test case
+        // Setting "archive" parameter disables effect of many others, so it is tested separately in other test case
 
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("arguments", "jarsigner-arg1,jarsigner-arg2");
@@ -276,17 +287,16 @@ public class JarsignerSignMojoTest {
         configuration.put("keypass", "mykeypass");
         configuration.put("keystore", "mykeystore");
         configuration.put("maxMemory", "mymaxmemory");
-        configuration.put("processAttachedArtifacts", "true"); //Is default true, but set anyway.
-        configuration.put("processMainArtifact", "true"); //Is default true, but set anyway.
+        configuration.put("processAttachedArtifacts", "true"); // Is default true, but set anyway.
+        configuration.put("processMainArtifact", "true"); // Is default true, but set anyway.
         configuration.put("protectedAuthenticationPath", "true");
         configuration.put("providerArg", "myproviderarg");
         configuration.put("providerClass", "myproviderclass");
         configuration.put("providerName", "myprovidername");
         configuration.put("removeExistingSignatures", "true");
         configuration.put("sigfile", "mysigfile");
-        //configuration.put("signedjar", "mysignedjar"); // Current JarsignerSignMojo does not support this parameter.
 
-        configuration.put("skip", "false"); //Is default false, but set anyway
+        configuration.put("skip", "false"); // Is default false, but set anyway
         configuration.put("storepass", "mystorepass");
         configuration.put("storetype", "mystoretype");
         configuration.put("tsa", "mytsa");
@@ -315,7 +325,8 @@ public class JarsignerSignMojoTest {
         assertThat(requests, hasItem(not(RequestMatchers.hasFileName("my-project-included_and_excluded.jar"))));
         assertThat(requests, hasItem(not(RequestMatchers.hasFileName("my-project-excluded_classifier.jar"))));
 
-        assertThat(requests, everyItem(RequestMatchers.hasArguments(new String[]{"jarsigner-arg1", "jarsigner-arg2"})));
+        assertThat(
+                requests, everyItem(RequestMatchers.hasArguments(new String[] {"jarsigner-arg1", "jarsigner-arg2"})));
         assertThat(requests, everyItem(RequestMatchers.hasCertchain("mycertchain")));
         assertThat(requests, everyItem(RequestMatchers.hasKeypass("mykeypass")));
         assertThat(requests, everyItem(RequestMatchers.hasKeystore("mykeystore")));
@@ -336,7 +347,7 @@ public class JarsignerSignMojoTest {
     /** Make sure that if a custom ToolchainManager is set on the Mojo, it is used by jarSigner */
     @Test
     public void testToolchainManager() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
@@ -355,7 +366,7 @@ public class JarsignerSignMojoTest {
     /** Make sure the Mojo correctly invokes the SecDispatcher for decryption of passwords */
     @Test
     public void testSecurityDispatcher() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
 
@@ -374,7 +385,7 @@ public class JarsignerSignMojoTest {
     /** Make sure that a customer file encoding to jarsigner can be set and that it does not get duplicated */
     @Test
     public void testSetCustomFileEncoding() throws Exception {
-        Artifact mainArtifact = TestArtifacts.createJarArtifact(dummyMavenProjectDir, "my-project.jar");
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         configuration.put("arguments", "-J-Dfile.encoding=ISO-8859-1,argument2");
@@ -382,8 +393,8 @@ public class JarsignerSignMojoTest {
 
         mojo.execute();
 
-        verify(jarSigner).execute(MockitoHamcrest.argThat(RequestMatchers.hasArguments(new String[]{"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
+        verify(jarSigner)
+                .execute(MockitoHamcrest.argThat(
+                        RequestMatchers.hasArguments(new String[] {"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
     }
-
 }
-

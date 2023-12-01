@@ -31,17 +31,17 @@ import org.apache.maven.plugin.Mojo;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.toolchain.ToolchainManager;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 /**
  * Creates and configures a Mojo instance to be used in testing.
- * 
+ *
  * @param <T> The type of Mojo
  */
 public class MojoTestCreator<T extends Mojo> {
-    
+
     private final Logger logger = LoggerFactory.getLogger(MojoTestCreator.class);
 
     private final Class<T> clazz;
@@ -58,7 +58,7 @@ public class MojoTestCreator<T extends Mojo> {
         this.project = project;
         this.projectDir = projectDir;
         this.jarSigner = jarSigner;
-        
+
         securityDispatcher = str -> str; // Simple SecDispatcher that only returns parameter
         fields = getAllFields(clazz);
     }
@@ -85,7 +85,7 @@ public class MojoTestCreator<T extends Mojo> {
         if (toolchainManager != null) {
             setAttribute(mojo, "toolchainManager", toolchainManager);
         }
-        
+
         for (Map.Entry<String, String> entry : configuration.entrySet()) {
             Field field = getField(mojo, entry.getKey());
             setFieldByStringValue(mojo, field, entry.getValue());
@@ -109,8 +109,11 @@ public class MojoTestCreator<T extends Mojo> {
             String[] values = stringValue.split(",");
             field.set(instance, values);
         } else {
-            if (! stringValue.startsWith("${")) {
-                logger.warn("Not implemented support to set of field of type {} to value {}", fieldType.getSimpleName(), stringValue);
+            if (!stringValue.startsWith("${")) {
+                logger.warn(
+                        "Not implemented support to set of field of type {} to value {}",
+                        fieldType.getSimpleName(),
+                        stringValue);
             }
         }
     }
@@ -135,7 +138,7 @@ public class MojoTestCreator<T extends Mojo> {
             String defaultValue = defaultConfiguration.get(parameterName);
             defaultValue = substituteParameterValueVariables(defaultValue);
             Field field = getField(mojo, parameterName);
-            setFieldByStringValue(mojo, field, defaultValue.toString()); 
+            setFieldByStringValue(mojo, field, defaultValue.toString());
         }
     }
 

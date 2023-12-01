@@ -47,8 +47,7 @@ public class PluginXmlParser {
 
         Element mojoElement = findMojoByClass(doc, mojoClass.getName());
         if (mojoElement == null) {
-            throw new RuntimeException(
-                    "Mojo not found for class: " + mojoClass.getName());
+            throw new RuntimeException("Mojo not found for class: " + mojoClass.getName());
         }
 
         Element configurationElement =
