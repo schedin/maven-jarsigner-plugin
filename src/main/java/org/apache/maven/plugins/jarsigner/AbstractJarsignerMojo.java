@@ -351,7 +351,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
 
             getLog().info(getMessage("processed", processed));
         } else {
-            getLog().info(getMessage("disabled", null));
+            getLog().info(getMessage("disabled"));
         }
     }
 
@@ -581,31 +581,19 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * Gets a message for a given key from the resource bundle backing the implementation.
      *
      * @param key The key of the message to return.
-     * @param args Arguments to format the message with or {@code null}.
+     * @param args Arguments to format the message with.
      * @return The message with key {@code key} from the resource bundle backing the implementation.
      * @throws NullPointerException if {@code key} is {@code null}.
      * @throws java.util.MissingResourceException
      *             if there is no message available matching {@code key} or accessing
      *             the resource bundle fails.
      */
-    private String getMessage(final String key, final Object[] args) {
+    String getMessage(final String key, final Object... args) {
         if (key == null) {
             throw new NullPointerException("key");
         }
 
         return new MessageFormat(ResourceBundle.getBundle("jarsigner").getString(key)).format(args);
-    }
-
-    private String getMessage(final String key) {
-        return getMessage(key, null);
-    }
-
-    String getMessage(final String key, final Object arg) {
-        return getMessage(key, new Object[] {arg});
-    }
-
-    private String getMessage(final String key, final Object arg1, final Object arg2) {
-        return getMessage(key, new Object[] {arg1, arg2});
     }
 
     /**
