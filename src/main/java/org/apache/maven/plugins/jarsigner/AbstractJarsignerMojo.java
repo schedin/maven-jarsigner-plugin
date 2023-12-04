@@ -622,6 +622,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         return tc;
     }
 
+    /** Default (production code) implementation of WaitStrategy. Will sleep for retryDelay seconds */
     private void defaultWaitAfterFailure() throws MojoExecutionException {
         try {
             Thread.sleep(retryDelay * 1000L);
