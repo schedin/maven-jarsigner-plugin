@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.jarsigner.AbstractJarsignerMojo.WaitStrategy;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -48,6 +49,7 @@ public class JarsignerSignMojoRetryTest {
 
     private MavenProject project = mock(MavenProject.class);
     private JarSigner jarSigner = mock(JarSigner.class);
+    private WaitStrategy waitStrategy = mock(WaitStrategy.class);
     private File dummyMavenProjectDir;
     private Map<String, String> configuration = new LinkedHashMap<>();
     private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
@@ -65,12 +67,14 @@ public class JarsignerSignMojoRetryTest {
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         configuration.put("maxTries", "1");
+        mojoTestCreator.setWaitStrategy(waitStrategy);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
         verify(jarSigner)
                 .execute(argThat(request -> request.getArchive().getPath().endsWith("my-project.jar")));
+        verify(waitStrategy, times(0)).waitAfterFailure();
     }
 
     @Test
@@ -79,11 +83,13 @@ public class JarsignerSignMojoRetryTest {
         when(project.getArtifact()).thenReturn(mainArtifact);
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR);
         configuration.put("maxTries", "1");
+        mojoTestCreator.setWaitStrategy(waitStrategy);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
         assertThrows(MojoExecutionException.class, () -> {
             mojo.execute();
         });
         verify(jarSigner, times(1)).execute(any());
+        verify(waitStrategy, times(0)).waitAfterFailure();
     }
 
     @Test
@@ -94,11 +100,13 @@ public class JarsignerSignMojoRetryTest {
                 .thenReturn(RESULT_ERROR)
                 .thenReturn(RESULT_OK);
         configuration.put("maxTries", "2");
+        mojoTestCreator.setWaitStrategy(waitStrategy);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
         verify(jarSigner, times(2)).execute(any());
+        verify(waitStrategy, times(1)).waitAfterFailure();
     }
 
     @Test
@@ -109,10 +117,12 @@ public class JarsignerSignMojoRetryTest {
                 .thenReturn(RESULT_ERROR)
                 .thenReturn(RESULT_ERROR);
         configuration.put("maxTries", "2");
+        mojoTestCreator.setWaitStrategy(waitStrategy);
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
         assertThrows(MojoExecutionException.class, () -> {
             mojo.execute();
         });
         verify(jarSigner, times(2)).execute(any());
+        verify(waitStrategy, times(1)).waitAfterFailure();
     }
 }

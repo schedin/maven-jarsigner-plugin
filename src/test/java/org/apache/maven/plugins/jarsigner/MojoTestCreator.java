@@ -28,6 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.Mojo;
+import org.apache.maven.plugins.jarsigner.AbstractJarsignerMojo.WaitStrategy;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.toolchain.ToolchainManager;
@@ -40,7 +41,7 @@ import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
  *
  * @param <T> The type of Mojo
  */
-public class MojoTestCreator<T extends Mojo> {
+public class MojoTestCreator<T extends AbstractJarsignerMojo> {
 
     private final Logger logger = LoggerFactory.getLogger(MojoTestCreator.class);
 
@@ -50,6 +51,7 @@ public class MojoTestCreator<T extends Mojo> {
     private final JarSigner jarSigner;
     private ToolchainManager toolchainManager;
     private SecDispatcher securityDispatcher;
+    private WaitStrategy waitStrategy;
     private List<Field> fields;
 
     public MojoTestCreator(Class<T> clazz, MavenProject project, File projectDir, JarSigner jarSigner)
@@ -71,6 +73,10 @@ public class MojoTestCreator<T extends Mojo> {
         this.securityDispatcher = securityDispatcher;
     }
 
+    public void setWaitStrategy(WaitStrategy waitStrategy) {
+        this.waitStrategy = waitStrategy;
+    }
+
     /**
      * Creates and configures the Mojo instance.
      * @param configuration user supplied configuration.
@@ -84,6 +90,9 @@ public class MojoTestCreator<T extends Mojo> {
         setAttribute(mojo, "securityDispatcher", securityDispatcher);
         if (toolchainManager != null) {
             setAttribute(mojo, "toolchainManager", toolchainManager);
+        }
+        if (waitStrategy != null) {
+            mojo.setWaitStrategy(waitStrategy);
         }
 
         for (Map.Entry<String, String> entry : configuration.entrySet()) {

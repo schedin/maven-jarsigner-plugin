@@ -550,7 +550,6 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @throws MojoExecutionException
      */
     // TODO: The method should not be named sign.
-    // TODO: Merge delay from https://github.com/bdt-stru/maven-jarsigner-plugin/tree/maxTries into code.
     void sign(JarSigner jarSigner, JarSignerRequest request, int maxTries)
             throws JavaToolException, MojoExecutionException {
         Commandline commandLine = null;
@@ -561,6 +560,9 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             commandLine = result.getCommandline();
             if (resultCode == 0) {
                 return;
+            }
+            if (attempt < maxTries - 1) { // If not last attempt
+                waitStrategy.waitAfterFailure();
             }
         }
         throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
@@ -625,6 +627,9 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     /** Default (production code) implementation of WaitStrategy. Will sleep for retryDelay seconds */
     private void defaultWaitAfterFailure() throws MojoExecutionException {
         try {
+            if (retryDelay > 0) {
+                getLog().info("Sleeping after failed attempt for " + retryDelay + " seconds...");
+            }
             Thread.sleep(retryDelay * 1000L);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
