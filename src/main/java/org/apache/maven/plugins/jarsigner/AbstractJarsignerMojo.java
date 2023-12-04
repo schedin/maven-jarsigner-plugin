@@ -633,7 +633,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /** Set current WaitStrategy. Package private for testing. */
-    void setWaitPolicy(WaitStrategy waitStrategy) {
+    void setWaitStrategy(WaitStrategy waitStrategy) {
         this.waitStrategy = waitStrategy;
     }
 
