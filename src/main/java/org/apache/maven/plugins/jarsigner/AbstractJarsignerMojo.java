@@ -200,6 +200,14 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private int maxTries;
 
     /**
+     * Delay in seconds after a failed attempt before re-trying.
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "jarsigner.retryDelay", defaultValue = "0")
+    private int retryDelay;
+
+    /**
      * A set of artifact classifiers describing the project attachments that should be processed. This parameter is only
      * relevant if {@link #processAttachedArtifacts} is <code>true</code>. If empty, all attachments are included.
      *
@@ -266,6 +274,9 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      */
     @Component(hint = "mng-4384")
     private SecDispatcher securityDispatcher;
+
+    /** Current WaitStrategy, to allow for sleeping after a signing failure. */
+    private WaitStrategy waitStrategy = this::defaultWaitAfterFailure;
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
@@ -609,5 +620,30 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         }
 
         return tc;
+    }
+
+    private void defaultWaitAfterFailure() throws MojoExecutionException {
+        try {
+            Thread.sleep(retryDelay * 1000L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
+        }
+    }
+
+    /** Set current WaitStrategy. Package private for testing. */
+    void setWaitPolicy(WaitStrategy waitStrategy) {
+        this.waitStrategy = waitStrategy;
+    }
+
+    /** Wait/sleep after a signing failure before the next re-try should happen. */
+    @FunctionalInterface
+    interface WaitStrategy {
+        /**
+         * Will be called after a signing failure, if a re-try is about to happen. May as a side effect sleep current
+         * thread for some time.
+         * @throws MojoExecutionException If the sleep was interrupted.
+         */
+        void waitAfterFailure() throws MojoExecutionException;
     }
 }
