@@ -156,6 +156,13 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         return request;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Will retry signing up to maxTries times if it fails.
+     *
+     * @throws MojoExecutionException If all signing attempts fail.
+     */
     @Override
     protected void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
             throws JavaToolException, MojoExecutionException {
