@@ -185,15 +185,11 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private boolean protectedAuthenticationPath;
 
     /**
-     * How many times to try to sign or verify a jar (assuming each previous attempt is a failure).
+     * How many times to try to sign a jar (assuming each previous attempt is a failure). This option may be desirable
+     * if any network operations are used during signing, for example using a Time Stamp Authority or network based
+     * PKCS11 HSM solution for storing code signing keys.
      *
-     * This option may be desirable if any network operations are used during signing, for example a Time Stamp
-     * Authority or network based PKCS11 HSM solution for storing code signing keys.
-     *
-     * The default is "1" for one attempt.
-     *
-     * Less than 0 and "0" we be treated as 1 (because using "skip" is accepted and encouraged,
-     * and an infinite retry loop is undesirable).
+     * The default value of 1 indicate that no retries should be made.
      *
      * @since 3.1.0
      */
