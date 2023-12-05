@@ -70,6 +70,7 @@ under the License.
 
   <properties>
     <mavenVersion>3.2.5</mavenVersion>
+    <jacocoVersion>0.8.11</jacocoVersion>
     <project.build.outputTimestamp>2020-04-07T21:04:00Z</project.build.outputTimestamp>
   </properties>
 
@@ -172,7 +173,21 @@ under the License.
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.5</version>
+        <version>${jacocoVersion}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>prepare-package</phase>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
