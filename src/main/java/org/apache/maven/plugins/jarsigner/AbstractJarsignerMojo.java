@@ -634,7 +634,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         private Map<Object, ExponentialBackoffStrategy> exponentialBackoffMap = new ConcurrentHashMap<>();
 
         private ExponentialBackoffStrategy getExponentialBackoffStrategy() {
-            // Lazy init of ExponentialBackoffStrategy
+            // Lazy init of ExponentialBackoffStrategy because Mojo is created via reflection
             return exponentialBackoffMap.computeIfAbsent(
                     "exponentialBackoff-key",
                     key -> new ExponentialBackoffStrategy(
