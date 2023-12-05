@@ -31,6 +31,10 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+/**
+ * Parser of the generated META-INF/maven/plugin.xml for this project. The plugin.xml contains all mojos their
+ * configuration parameters along with default values.
+ */
 public class PluginXmlParser {
     private static final String MOJO_IMPLEMENTATION_TAG = "implementation";
     private static final String MOJO_TAG = "mojo";
@@ -69,7 +73,7 @@ public class PluginXmlParser {
         return defaultConfiguration;
     }
 
-    /** Searches in every &lt;mojo&gt; element for an &lt;implementation&gt; matching the class name */
+    /** Searches in every mojo tag for an implementation tag matching the class name */
     private static Element findMojoByClass(Document doc, String className) {
         NodeList mojoList = doc.getElementsByTagName(MOJO_TAG);
         for (int i = 0; i < mojoList.getLength(); i++) {
