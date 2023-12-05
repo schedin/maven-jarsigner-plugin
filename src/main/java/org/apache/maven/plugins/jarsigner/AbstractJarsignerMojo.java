@@ -30,11 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -276,7 +278,8 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private SecDispatcher securityDispatcher;
 
     /** Current WaitStrategy, to allow for sleeping after a signing failure. */
-    private WaitStrategy waitStrategy = new DefaultWaitStrategy();
+    private WaitStrategy waitStrategy =
+            new ExponentialBackoffWaitStrategy(() -> Duration.ofSeconds(maxRetryDelaySeconds), this::getLog);
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
@@ -628,17 +631,24 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         void waitAfterFailure() throws MojoExecutionException;
     }
 
-    /** Default implementation of a WaitStrategy. Will sleep using a increasing exponential algorithm. */
-    private class DefaultWaitStrategy implements WaitStrategy {
+    /**
+     * Default implementation of a WaitStrategy. Will sleep using a increasing exponential algorithm.
+     */
+    static class ExponentialBackoffWaitStrategy implements WaitStrategy {
+        private final Supplier<Duration> maxDelaySupplier;
+        private final Map<Object, ExponentialBackoffStrategy> exponentialBackoffMap = new ConcurrentHashMap<>();
+        private final Supplier<Log> logSupplier;
 
-        private Map<Object, ExponentialBackoffStrategy> exponentialBackoffMap = new ConcurrentHashMap<>();
+        ExponentialBackoffWaitStrategy(Supplier<Duration> maxDelaySupplier, Supplier<Log> logSupplier) {
+            this.maxDelaySupplier = maxDelaySupplier;
+            this.logSupplier = logSupplier;
+        }
 
         private ExponentialBackoffStrategy getExponentialBackoffStrategy() {
             // Lazy init of ExponentialBackoffStrategy because Mojo is created via reflection
             return exponentialBackoffMap.computeIfAbsent(
                     "exponentialBackoff-key",
-                    key -> new ExponentialBackoffStrategy(
-                            Duration.ofSeconds(1), Duration.ofSeconds(maxRetryDelaySeconds)));
+                    key -> new ExponentialBackoffStrategy(Duration.ofSeconds(1), maxDelaySupplier.get()));
         }
 
         @Override
@@ -646,7 +656,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             try {
                 Duration delay = getExponentialBackoffStrategy().calculateNextDelay();
                 if (!delay.isZero()) {
-                    getLog().info("Sleeping after failed attempt for " + delay.getSeconds() + " seconds...");
+                    logSupplier.get().info("Sleeping after failed attempt for " + delay.getSeconds() + " seconds...");
                     Thread.sleep(delay.toMillis());
                 }
             } catch (InterruptedException e) {
