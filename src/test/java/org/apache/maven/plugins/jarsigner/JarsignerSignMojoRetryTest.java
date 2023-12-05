@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -74,7 +75,7 @@ public class JarsignerSignMojoRetryTest {
 
         verify(jarSigner)
                 .execute(argThat(request -> request.getArchive().getPath().endsWith("my-project.jar")));
-        verify(waitStrategy, times(0)).waitAfterFailure();
+        verify(waitStrategy, times(0)).waitAfterFailure(0, Duration.ofSeconds(0));
     }
 
     @Test
@@ -89,7 +90,7 @@ public class JarsignerSignMojoRetryTest {
             mojo.execute();
         });
         verify(jarSigner, times(1)).execute(any());
-        verify(waitStrategy, times(0)).waitAfterFailure();
+        verify(waitStrategy, times(0)).waitAfterFailure(0, Duration.ofSeconds(0));
     }
 
     @Test
@@ -106,7 +107,7 @@ public class JarsignerSignMojoRetryTest {
         mojo.execute();
 
         verify(jarSigner, times(2)).execute(any());
-        verify(waitStrategy, times(1)).waitAfterFailure();
+        verify(waitStrategy, times(1)).waitAfterFailure(0, Duration.ofSeconds(0));
     }
 
     @Test
@@ -123,6 +124,6 @@ public class JarsignerSignMojoRetryTest {
             mojo.execute();
         });
         verify(jarSigner, times(2)).execute(any());
-        verify(waitStrategy, times(1)).waitAfterFailure();
+        verify(waitStrategy, times(1)).waitAfterFailure(0, Duration.ofSeconds(0));
     }
 }

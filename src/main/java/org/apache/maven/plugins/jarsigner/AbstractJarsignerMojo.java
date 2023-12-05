@@ -27,16 +27,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -278,8 +274,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private SecDispatcher securityDispatcher;
 
     /** Current WaitStrategy, to allow for sleeping after a signing failure. */
-    private WaitStrategy waitStrategy =
-            new ExponentialBackoffWaitStrategy(() -> Duration.ofSeconds(maxRetryDelaySeconds), this::getLog);
+    private WaitStrategy waitStrategy = this::defaultWaitStrategy;
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
@@ -536,24 +531,23 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         request.setStorepass(decrypt(storepass));
 
         try {
-            sign(jarSigner, request, maxTries);
+            executeJarSigner(jarSigner, request);
         } catch (JavaToolException e) {
             throw new MojoExecutionException(getMessage("commandLineException", e.getMessage()), e);
         }
     }
 
     /**
-     * Attempts signing with a maximum number of maxTries times. If all attempts fail, MojoExecutionException is thrown.
-     * If java tool invocation could not be created, a JavaToolException will be thrown.
+     * Executes JarSigner (attempts signing) with a maximum number of maxTries times. If all attempts fail,
+     * MojoExecutionException is thrown. If java tool invocation could not be created, a JavaToolException will be
+     * thrown.
      *
-     * @param jarSigner the JarSigner
-     * @param request the JarSignerRequest
-     * @param maxTries a positive integer
+     * @param jarSigner the JarSigner execution interface.
+     * @param request the JarSignerRequest with parameters JarSigner should use.
      * @throws JavaToolException
      * @throws MojoExecutionException
      */
-    // TODO: The method should not be named sign.
-    void sign(JarSigner jarSigner, JarSignerRequest request, int maxTries)
+    private void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
             throws JavaToolException, MojoExecutionException {
         Commandline commandLine = null;
         int resultCode = 0;
@@ -565,7 +559,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                 return;
             }
             if (attempt < maxTries - 1) { // If not last attempt
-                waitStrategy.waitAfterFailure();
+                waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
             }
         }
         throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
@@ -626,39 +620,20 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         /**
          * Will be called after a signing failure, if a re-try is about to happen. May as a side effect sleep current
          * thread for some time.
+         * @param attempt the attempt number (0 is the first).
+         * @param maxRetryDelay The maximum duration to sleep (may be 0).
          * @throws MojoExecutionException If the sleep was interrupted.
          */
-        void waitAfterFailure() throws MojoExecutionException;
+        void waitAfterFailure(int attempt, Duration maxRetryDelay) throws MojoExecutionException;
     }
 
-    /**
-     * Default implementation of a WaitStrategy. Will sleep using a increasing exponential algorithm.
-     */
-    static class ExponentialBackoffWaitStrategy implements WaitStrategy {
-        private final Supplier<Duration> maxDelaySupplier;
-        private final Map<Object, ExponentialBackoffStrategy> exponentialBackoffMap = new ConcurrentHashMap<>();
-        private final Supplier<Log> logSupplier;
-
-        ExponentialBackoffWaitStrategy(Supplier<Duration> maxDelaySupplier, Supplier<Log> logSupplier) {
-            this.maxDelaySupplier = maxDelaySupplier;
-            this.logSupplier = logSupplier;
-        }
-
-        private ExponentialBackoffStrategy getExponentialBackoffStrategy() {
-            // Lazy init of ExponentialBackoffStrategy because Mojo is created via reflection
-            return exponentialBackoffMap.computeIfAbsent(
-                    "exponentialBackoff-key",
-                    key -> new ExponentialBackoffStrategy(Duration.ofSeconds(1), maxDelaySupplier.get()));
-        }
-
-        @Override
-        public void waitAfterFailure() throws MojoExecutionException {
+    private void defaultWaitStrategy(int attempt, Duration maxRetryDelay) throws MojoExecutionException {
+        long delayMillis = (long) (Duration.ofSeconds(1).toMillis() * Math.pow(2, attempt));
+        delayMillis = Math.min(delayMillis, maxRetryDelay.toMillis());
+        if (delayMillis > 0) {
+            getLog().info("Sleeping after failed attempt for " + (delayMillis / 1000) + " seconds...");
             try {
-                Duration delay = getExponentialBackoffStrategy().calculateNextDelay();
-                if (!delay.isZero()) {
-                    logSupplier.get().info("Sleeping after failed attempt for " + delay.getSeconds() + " seconds...");
-                    Thread.sleep(delay.toMillis());
-                }
+                Thread.sleep(delayMillis);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
