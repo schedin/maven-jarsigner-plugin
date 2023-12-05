@@ -27,7 +27,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
@@ -629,18 +631,20 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     /** Default implementation of a WaitStrategy. Will sleep using a increasing exponential algorithm. */
     private class DefaultWaitStrategy implements WaitStrategy {
 
-        private ExponentialBackoffStrategy exponentialBackoff;
+        private Map<Object, ExponentialBackoffStrategy> exponentialBackoffMap = new ConcurrentHashMap<>();
 
-        private DefaultWaitStrategy() {
-            // TODO: This needs lazy init to work!
-            exponentialBackoff =
-                    new ExponentialBackoffStrategy(Duration.ofSeconds(1), Duration.ofSeconds(maxRetryDelaySeconds));
+        private ExponentialBackoffStrategy getExponentialBackoffStrategy() {
+            // Lazy init of ExponentialBackoffStrategy
+            return exponentialBackoffMap.computeIfAbsent(
+                    "exponentialBackoff-key",
+                    key -> new ExponentialBackoffStrategy(
+                            Duration.ofSeconds(1), Duration.ofSeconds(maxRetryDelaySeconds)));
         }
 
         @Override
         public void waitAfterFailure() throws MojoExecutionException {
             try {
-                Duration delay = exponentialBackoff.calculateNextDelay();
+                Duration delay = getExponentialBackoffStrategy().calculateNextDelay();
                 if (!delay.isZero()) {
                     getLog().info("Sleeping after failed attempt for " + delay.getSeconds() + " seconds...");
                     Thread.sleep(delay.toMillis());
