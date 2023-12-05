@@ -20,16 +20,20 @@ package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
 import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.StringUtils;
 import org.apache.maven.shared.utils.cli.Commandline;
+import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
+import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 
 /**
  * Signs a project artifact and attachments using jarsigner.
@@ -90,6 +94,30 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.certchain", readonly = true, required = false)
     private File certchain;
 
+    /**
+     * How many times to try to sign a jar (assuming each previous attempt is a failure). This option may be desirable
+     * if any network operations are used during signing, for example using a Time Stamp Authority or network based
+     * PKCS11 HSM solution for storing code signing keys.
+     *
+     * The default value of 1 indicate that no retries should be made.
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "jarsigner.maxTries", defaultValue = "1")
+    private int maxTries;
+
+    /**
+     * Maximum delay, in seconds, to wait after a failed attempt before re-trying. The delay after a failed attempt
+     * follows an exponential backoff strategy, with increasing delay times.
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "jarsigner.maxRetryDelaySeconds", defaultValue = "0")
+    private int maxRetryDelaySeconds;
+
+    /** Current WaitStrategy, to allow for sleeping after a signing failure. */
+    private WaitStrategy waitStrategy = this::defaultWaitStrategy;
+
     @Override
     protected String getCommandlineInfo(final Commandline commandLine) {
         String commandLineInfo = commandLine != null ? commandLine.toString() : null;
@@ -115,6 +143,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * {@inheritDoc}
      */
+    @Override
     protected JarSignerRequest createRequest(File archive) throws MojoExecutionException {
         JarSignerSignRequest request = new JarSignerSignRequest();
         request.setSigfile(sigfile);
@@ -125,5 +154,56 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         // Special handling for passwords through the Maven Security Dispatcher
         request.setKeypass(decrypt(keypass));
         return request;
+    }
+
+    @Override
+    protected void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
+            throws JavaToolException, MojoExecutionException {
+        Commandline commandLine = null;
+        int resultCode = 0;
+        for (int attempt = 0; attempt < maxTries; attempt++) {
+            JavaToolResult result = jarSigner.execute(request);
+            resultCode = result.getExitCode();
+            commandLine = result.getCommandline();
+            if (resultCode == 0) {
+                return;
+            }
+            if (attempt < maxTries - 1) { // If not last attempt
+                waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
+            }
+        }
+        throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
+    }
+
+    /** Set current WaitStrategy. Package private for testing. */
+    void setWaitStrategy(WaitStrategy waitStrategy) {
+        this.waitStrategy = waitStrategy;
+    }
+
+    /** Wait/sleep after a signing failure before the next re-try should happen. */
+    @FunctionalInterface
+    interface WaitStrategy {
+        /**
+         * Will be called after a signing failure, if a re-try is about to happen. May as a side effect sleep current
+         * thread for some time.
+         * @param attempt the attempt number (0 is the first).
+         * @param maxRetryDelay The maximum duration to sleep (may be zero).
+         * @throws MojoExecutionException If the sleep was interrupted.
+         */
+        void waitAfterFailure(int attempt, Duration maxRetryDelay) throws MojoExecutionException;
+    }
+
+    private void defaultWaitStrategy(int attempt, Duration maxRetryDelay) throws MojoExecutionException {
+        long delayMillis = (long) (Duration.ofSeconds(1).toMillis() * Math.pow(2, attempt));
+        delayMillis = Math.min(delayMillis, maxRetryDelay.toMillis());
+        if (delayMillis > 0) {
+            getLog().info("Sleeping after failed attempt for " + (delayMillis / 1000) + " seconds...");
+            try {
+                Thread.sleep(delayMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
+            }
+        }
     }
 }

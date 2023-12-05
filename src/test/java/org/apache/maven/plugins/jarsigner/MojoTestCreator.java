@@ -28,7 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.Mojo;
-import org.apache.maven.plugins.jarsigner.AbstractJarsignerMojo.WaitStrategy;
+import org.apache.maven.plugins.jarsigner.JarsignerSignMojo.WaitStrategy;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.toolchain.ToolchainManager;
@@ -92,7 +92,7 @@ public class MojoTestCreator<T extends AbstractJarsignerMojo> {
             setAttribute(mojo, "toolchainManager", toolchainManager);
         }
         if (waitStrategy != null) {
-            mojo.setWaitStrategy(waitStrategy);
+            ((JarsignerSignMojo) mojo).setWaitStrategy(waitStrategy);
         }
 
         for (Map.Entry<String, String> entry : configuration.entrySet()) {

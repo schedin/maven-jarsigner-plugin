@@ -21,7 +21,6 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,7 +43,6 @@ import org.apache.maven.shared.utils.ReaderFactory;
 import org.apache.maven.shared.utils.StringUtils;
 import org.apache.maven.shared.utils.cli.Commandline;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
-import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
 import org.apache.maven.shared.utils.io.FileUtils;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
@@ -185,27 +183,6 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private boolean protectedAuthenticationPath;
 
     /**
-     * How many times to try to sign a jar (assuming each previous attempt is a failure). This option may be desirable
-     * if any network operations are used during signing, for example using a Time Stamp Authority or network based
-     * PKCS11 HSM solution for storing code signing keys.
-     *
-     * The default value of 1 indicate that no retries should be made.
-     *
-     * @since 3.1.0
-     */
-    @Parameter(property = "jarsigner.maxTries", defaultValue = "1")
-    private int maxTries;
-
-    /**
-     * Maximum delay, in seconds, to wait after a failed attempt before re-trying. The delay after a failed attempt
-     * follows an exponential backoff strategy, with increasing delay times.
-     *
-     * @since 3.1.0
-     */
-    @Parameter(property = "jarsigner.maxRetryDelaySeconds", defaultValue = "0")
-    private int maxRetryDelaySeconds;
-
-    /**
      * A set of artifact classifiers describing the project attachments that should be processed. This parameter is only
      * relevant if {@link #processAttachedArtifacts} is <code>true</code>. If empty, all attachments are included.
      *
@@ -273,9 +250,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     @Component(hint = "mng-4384")
     private SecDispatcher securityDispatcher;
 
-    /** Current WaitStrategy, to allow for sleeping after a signing failure. */
-    private WaitStrategy waitStrategy = this::defaultWaitStrategy;
-
+    @Override
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
             Toolchain toolchain = getToolchain();
@@ -535,30 +510,15 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /**
-     * Executes JarSigner (attempts signing) with a maximum number of maxTries times.
+     * Executes JarSigner (execute signing/verification).
      *
      * @param jarSigner the JarSigner execution interface.
      * @param request the JarSignerRequest with parameters JarSigner should use.
      * @throws JavaToolException if java tool invocation could not be created
-     * @throws MojoExecutionException If all attempts fail or if interrupted.
+     * @throws MojoExecutionException if the invocation of JarSigner went okay, but it return a non-zero exit code
      */
-    private void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
-            throws JavaToolException, MojoExecutionException {
-        Commandline commandLine = null;
-        int resultCode = 0;
-        for (int attempt = 0; attempt < maxTries; attempt++) {
-            JavaToolResult result = jarSigner.execute(request);
-            resultCode = result.getExitCode();
-            commandLine = result.getCommandline();
-            if (resultCode == 0) {
-                return;
-            }
-            if (attempt < maxTries - 1) { // If not last attempt
-                waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
-            }
-        }
-        throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
-    }
+    protected abstract void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
+            throws JavaToolException, MojoExecutionException;
 
     protected String decrypt(String encoded) throws MojoExecutionException {
         try {
@@ -602,37 +562,5 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         }
 
         return tc;
-    }
-
-    /** Set current WaitStrategy. Package private for testing. */
-    void setWaitStrategy(WaitStrategy waitStrategy) {
-        this.waitStrategy = waitStrategy;
-    }
-
-    /** Wait/sleep after a signing failure before the next re-try should happen. */
-    @FunctionalInterface
-    interface WaitStrategy {
-        /**
-         * Will be called after a signing failure, if a re-try is about to happen. May as a side effect sleep current
-         * thread for some time.
-         * @param attempt the attempt number (0 is the first).
-         * @param maxRetryDelay The maximum duration to sleep (may be zero).
-         * @throws MojoExecutionException If the sleep was interrupted.
-         */
-        void waitAfterFailure(int attempt, Duration maxRetryDelay) throws MojoExecutionException;
-    }
-
-    private void defaultWaitStrategy(int attempt, Duration maxRetryDelay) throws MojoExecutionException {
-        long delayMillis = (long) (Duration.ofSeconds(1).toMillis() * Math.pow(2, attempt));
-        delayMillis = Math.min(delayMillis, maxRetryDelay.toMillis());
-        if (delayMillis > 0) {
-            getLog().info("Sleeping after failed attempt for " + (delayMillis / 1000) + " seconds...");
-            try {
-                Thread.sleep(delayMillis);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
-            }
-        }
     }
 }
