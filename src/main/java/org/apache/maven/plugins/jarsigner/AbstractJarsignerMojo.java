@@ -21,6 +21,7 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -200,12 +201,13 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private int maxTries;
 
     /**
-     * Delay in seconds after a failed attempt before re-trying.
+     * Maximum delay, in seconds, to wait after a failed attempt before re-trying. The delay after a failed attempt
+     * follows an exponential backoff strategy, with increasing delay times.
      *
      * @since 3.1.0
      */
-    @Parameter(property = "jarsigner.retryDelay", defaultValue = "0")
-    private int retryDelay;
+    @Parameter(property = "jarsigner.maxRetryDelaySeconds", defaultValue = "0")
+    private int maxRetryDelaySeconds;
 
     /**
      * A set of artifact classifiers describing the project attachments that should be processed. This parameter is only
@@ -276,7 +278,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     private SecDispatcher securityDispatcher;
 
     /** Current WaitStrategy, to allow for sleeping after a signing failure. */
-    private WaitStrategy waitStrategy = this::defaultWaitAfterFailure;
+    private WaitStrategy waitStrategy = new DefaultWaitStrategy();
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
@@ -612,19 +614,6 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         return tc;
     }
 
-    /** Default (production code) implementation of WaitStrategy. Will sleep for retryDelay seconds */
-    private void defaultWaitAfterFailure() throws MojoExecutionException {
-        try {
-            if (retryDelay > 0) {
-                getLog().info("Sleeping after failed attempt for " + retryDelay + " seconds...");
-            }
-            Thread.sleep(retryDelay * 1000L);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
-        }
-    }
-
     /** Set current WaitStrategy. Package private for testing. */
     void setWaitStrategy(WaitStrategy waitStrategy) {
         this.waitStrategy = waitStrategy;
@@ -639,5 +628,31 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
          * @throws MojoExecutionException If the sleep was interrupted.
          */
         void waitAfterFailure() throws MojoExecutionException;
+    }
+
+    /** Default implementation of a WaitStrategy. Will sleep using a increasing exponential algorithm. */
+    private class DefaultWaitStrategy implements WaitStrategy {
+
+        private ExponentialBackoffStrategy exponentialBackoff;
+
+        private DefaultWaitStrategy() {
+            // TODO: This needs lazy init to work!
+            exponentialBackoff =
+                    new ExponentialBackoffStrategy(Duration.ofSeconds(1), Duration.ofSeconds(maxRetryDelaySeconds));
+        }
+
+        @Override
+        public void waitAfterFailure() throws MojoExecutionException {
+            try {
+                Duration delay = exponentialBackoff.calculateNextDelay();
+                if (!delay.isZero()) {
+                    getLog().info("Sleeping after failed attempt for " + delay.getSeconds() + " seconds...");
+                    Thread.sleep(delay.toMillis());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new MojoExecutionException("Thread interrupted while waiting after failure", e);
+            }
+        }
     }
 }
