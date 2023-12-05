@@ -278,9 +278,6 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
 
     public final void execute() throws MojoExecutionException {
         if (!this.skip) {
-            if (maxTries <= 0) {
-                maxTries = 1;
-            }
             Toolchain toolchain = getToolchain();
 
             if (toolchain != null) {
@@ -538,14 +535,12 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /**
-     * Executes JarSigner (attempts signing) with a maximum number of maxTries times. If all attempts fail,
-     * MojoExecutionException is thrown. If java tool invocation could not be created, a JavaToolException will be
-     * thrown.
+     * Executes JarSigner (attempts signing) with a maximum number of maxTries times.
      *
      * @param jarSigner the JarSigner execution interface.
      * @param request the JarSignerRequest with parameters JarSigner should use.
-     * @throws JavaToolException
-     * @throws MojoExecutionException
+     * @throws JavaToolException if java tool invocation could not be created
+     * @throws MojoExecutionException If all attempts fail or if interrupted.
      */
     private void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
             throws JavaToolException, MojoExecutionException {
@@ -621,7 +616,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
          * Will be called after a signing failure, if a re-try is about to happen. May as a side effect sleep current
          * thread for some time.
          * @param attempt the attempt number (0 is the first).
-         * @param maxRetryDelay The maximum duration to sleep (may be 0).
+         * @param maxRetryDelay The maximum duration to sleep (may be zero).
          * @throws MojoExecutionException If the sleep was interrupted.
          */
         void waitAfterFailure(int attempt, Duration maxRetryDelay) throws MojoExecutionException;
