@@ -510,12 +510,12 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /**
-     * Executes JarSigner (execute signing/verification).
+     * Executes jarsigner (execute signing or verification for a jar file).
      *
      * @param jarSigner the JarSigner execution interface.
      * @param request the JarSignerRequest with parameters JarSigner should use.
-     * @throws JavaToolException if java tool invocation could not be created
-     * @throws MojoExecutionException if the invocation of JarSigner went okay, but it return a non-zero exit code
+     * @throws JavaToolException if jarsigner could not be invoked.
+     * @throws MojoExecutionException if the invocation of jarsigner succeeded, but returned a non-zero exit code.
      */
     protected abstract void executeJarSigner(JarSigner jarSigner, JarSignerRequest request)
             throws JavaToolException, MojoExecutionException;

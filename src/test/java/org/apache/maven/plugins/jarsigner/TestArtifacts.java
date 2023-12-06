@@ -28,6 +28,9 @@ import java.util.zip.ZipOutputStream;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 
+/**
+ * Test utility class to create Artifact objects, jar file or other files that Maven attaches to a project
+ */
 class TestArtifacts {
     static final String TEST_GROUPID = "org.test-group";
     static final String TEST_ARTIFACTID = "test-artifact";
