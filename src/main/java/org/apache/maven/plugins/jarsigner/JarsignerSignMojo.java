@@ -115,6 +115,16 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.maxRetryDelaySeconds", defaultValue = "0")
     private int maxRetryDelaySeconds;
 
+    /**
+     * How many threads to use (in parallel) when signing jar files. This option may be desirable
+     * if any network operations are used during signing, for example using a Time Stamp Authority
+     * or network based PKCS11 HSM solution for storing code signing keys.
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "jarsigner.threadCount", defaultValue = "1")
+    private int threadCount;
+
     /** Current WaitStrategy, to allow for sleeping after a signing failure. */
     private WaitStrategy waitStrategy = this::defaultWaitStrategy;
 
