@@ -116,7 +116,7 @@ public class JarsignerSignMojoParallelTest {
             JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
             // Make one jar file wait until some external event happens
             if (request.getArchive().getPath().endsWith("archive2.jar") || request.getArchive().getPath().endsWith("archive3.jar")) {
-                latch.await();
+                latch.await(); //TODO: This does not work. Switch to Semaphore
             }
             return RESULT_OK;
         });
