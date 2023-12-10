@@ -27,6 +27,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
@@ -329,11 +333,32 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                 } catch (IOException e) {
                     throw new MojoExecutionException("Failed to scan archive directory for JARs: " + e.getMessage(), e);
                 }
+                AtomicInteger numberOfprocessed = new AtomicInteger(0);
+                ForkJoinPool customThreadPool = new ForkJoinPool(2);
 
-                for (File jarFile : jarFiles) {
-                    processArchive(jarFile);
-                    processed++;
+                Consumer<File> f = jarFile -> {
+                    try {
+                        processArchive(jarFile);
+                        numberOfprocessed.incrementAndGet();
+                    } catch (Exception e) {
+                        getLog().error("Failed to process " + jarFile.getAbsolutePath(), e);
+                    }
+                };
+                jarFiles.forEach(jarFile -> customThreadPool.submit(() -> f.accept(jarFile)));
+                customThreadPool.shutdown();
+                try {
+                    customThreadPool.awaitTermination(1, TimeUnit.DAYS);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
+                processed += numberOfprocessed.get();
+
+                
+//                for (File jarFile : jarFiles) {
+//                    processArchive(jarFile);
+//                    processed++;
+//                }
             }
         }
 
