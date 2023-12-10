@@ -19,8 +19,10 @@
 package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -43,6 +45,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,28 +67,29 @@ public class JarsignerSignMojoParallelTest {
                 new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, projectDir, jarSigner);
         executor = Executors.newSingleThreadExecutor(namedThreadFactory(getClass().getSimpleName()));
     }
-    
+
     @After
     public void tearDown() {
         executor.shutdown();
-    }    
+    }
 
     @Test(timeout = 600000) // TODO: change timeout before merge
     public void test10Files2Parallel() throws Exception {
         File archiveDirectory = new File(projectDir, "my_archive_dir");
         archiveDirectory.mkdir();
-
         for (int i = 0; i < 10; i++) {
             TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive" + i + ".jar"));
         }
-
         configuration.put("processMainArtifact", "false");
         configuration.put("archiveDirectory", archiveDirectory.getPath());
         configuration.put("threadCount", "2");
 
+        CountDownLatch latch = new CountDownLatch(1);
         when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
-            Object a = invocation.getArgument(0);
-            System.out.println(a);
+            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
+            if (request.getArchive().getPath().endsWith("archive2.jar")) {
+                latch.await(); //Make one jar file wait until some external event happens
+            }
             return RESULT_OK;
         });
 
@@ -97,18 +101,16 @@ public class JarsignerSignMojoParallelTest {
             return null;
         });
 
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(9)).execute(any());
 
-        
-        
-        
+        latch.countDown(); // Release the one waiting jar file
+
         future.get(600, TimeUnit.SECONDS); // TODO: change timeout before merge
-        //executor.shutdown();
-        //executor.awaitTermination(20, TimeUnit.SECONDS);
         verify(jarSigner, times(10)).execute(any());
-        
+
     }
 
     private static ThreadFactory namedThreadFactory(String threadNamePrefix) {
         return r -> new Thread(r, threadNamePrefix + "-Thread");
-    }    
+    }
 }
