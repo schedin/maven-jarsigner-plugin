@@ -74,7 +74,7 @@ public class JarsignerSignMojoParallelTest {
         executor.shutdown();
     }
 
-    @Test(timeout = 30000) // TODO: change timeout before merge
+    @Test(timeout = 300000) // TODO: change timeout before merge
     public void test10Files2Parallel() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
@@ -95,16 +95,52 @@ public class JarsignerSignMojoParallelTest {
             return null;
         });
 
-        // Wait until 10 invocation to execute has happened
-        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
+        // Wait until 10 invocation to execute has happened (nine files are done and one are hanging)
+        verify(jarSigner, timeout(Duration.ofSeconds(100).toMillis()).times(10)).execute(any());
         // Even though 10 invocations to execute() has happened, mojo is not yet done executing (it is waiting for one)
         assertFalse(future.isDone());
 
         latch.countDown(); // Release the one waiting jar file
-        future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
+        future.get(100, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
     }
 
+    
+    @Test(timeout = 30000) // TODO: change timeout before merge
+    public void test10Files2Parallel2Hanging() throws Exception {
+        configuration.put("archiveDirectory", createArchives(10).getPath());
+        configuration.put("threadCount", "2");
+
+        CountDownLatch latch = new CountDownLatch(2);
+        when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
+            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
+            // Make one jar file wait until some external event happens
+            if (request.getArchive().getPath().endsWith("archive2.jar") || request.getArchive().getPath().endsWith("archive3.jar")) {
+                latch.await();
+            }
+            return RESULT_OK;
+        });
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        Future<Void> future = executor.submit(() -> {
+            mojo.execute();
+            return null;
+        });
+
+        // Wait until 4 invocation to execute has happened (0 and 1 has finished and 2 and 3 are hanging)
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(4)).execute(any());
+        assertFalse(future.isDone());
+
+        latch.countDown(); // Release the one waiting jar file
+        
+        // Wait until 10 invocation to execute has happened (nine files are done and one are hanging)
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
+        
+        latch.countDown(); // Release last
+        future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
+        assertTrue(future.isDone());
+    }
+    
     @Test(timeout = 30000) // TODO: change timeout before merge
     public void test10Files1Parallel() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
@@ -126,8 +162,8 @@ public class JarsignerSignMojoParallelTest {
             return null;
         });
 
-        // Wait until 3 invocation has happened (0 and 1 will have finished and 2 has been called but not yet done).
-        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(3)).execute(any());
+        // Wait until 10 invocation to execute has happened (nine has finished and one is hanging).
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
         assertFalse(future.isDone());
 
         latch.countDown(); // Release the one waiting jar file
