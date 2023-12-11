@@ -357,11 +357,14 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            executor.shutdownNow();
             throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
         } catch (ExecutionException e) {
+            executor.shutdownNow();
             if (e.getCause() instanceof MojoExecutionException) {
                 throw (MojoExecutionException) e.getCause();
             }
+            throw new MojoExecutionException("Error processing archives", e);
         } finally {
             executor.shutdown();
         }
