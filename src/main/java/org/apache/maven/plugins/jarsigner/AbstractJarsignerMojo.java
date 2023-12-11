@@ -27,10 +27,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
@@ -333,36 +336,153 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                 } catch (IOException e) {
                     throw new MojoExecutionException("Failed to scan archive directory for JARs: " + e.getMessage(), e);
                 }
-                AtomicInteger numberOfprocessed = new AtomicInteger(0);
-                ForkJoinPool customThreadPool = new ForkJoinPool(2);
-
-                Consumer<File> f = jarFile -> {
-                    try {
-                        processArchive(jarFile);
-                        numberOfprocessed.incrementAndGet();
-                    } catch (Exception e) {
-                        getLog().error("Failed to process " + jarFile.getAbsolutePath(), e);
-                    }
-                };
-                jarFiles.forEach(jarFile -> customThreadPool.submit(() -> f.accept(jarFile)));
-                customThreadPool.shutdown();
-                try {
-                    customThreadPool.awaitTermination(1, TimeUnit.DAYS);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-                processed += numberOfprocessed.get();
-
-                // for (File jarFile : jarFiles) {
-                //    processArchive(jarFile);
-                //    processed++;
-                // }
+                processArchives(jarFiles);
             }
         }
 
         getLog().info(getMessage("processed", processed));
     }
+
+    private CompletableFuture<Void> processArchiveAsync(File archive) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                processArchive(archive);
+            } catch (Exception e) {
+                // Handle exception and propagate it
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private Callable<Void> processArchiveCallable(final File archive) {
+        return () -> {
+            return processArchiveVoid(archive);
+        };
+    }
+
+    private void processArchive(final File archive) throws MojoExecutionException {
+        System.out.println("Processsing " + archive.getPath());
+    }
+
+    void processArchives(List<File> archives) throws MojoExecutionException {
+        int threadCount = 2;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        
+        
+        
+        
+        
+        List<Callable<Void>> tasks =
+                archives.stream().map(this::processArchiveCallable).collect(Collectors.toList());
+
+//        List<CompletableFuture<Void>> completableFutures = archives.stream()
+//                        .map(archive -> CompletableFuture.supplyAsync(() -> processArchiveVoid(archive), executor))
+//                        .collect(Collectors.toList());
+        List<CompletableFuture<Void>> completableFutures = archives.stream()
+                        .map(archive -> CompletableFuture.runAsync(() -> processArchive(archive), executor)
+                                .exceptionally(ex -> {
+                                    throw new CompletionException(handleCheckedException(ex));
+                                }))
+                        .collect(Collectors.toList());        
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+        try {
+            allOf.join();
+        } catch (CompletionException e) {
+            throw new MojoExecutionException("Error signing", e);
+        } catch (CancellationException e) {
+            throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
+        } finally {
+            executor.shutdown();
+        } 
+    }
+
+    private RuntimeException handleCheckedException(Throwable ex) {
+        if (ex instanceof RuntimeException) {
+            return (RuntimeException) ex;
+        } else {
+            return new RuntimeException(ex);
+        }
+    }
+    
+    private Void processArchiveVoid(final File archive) throws MojoExecutionException {
+        processArchive(archive);
+        return null;
+    }
+
+    
+    //////////
+    
+//    private CompletableFuture<Void> processArchiveAsync(File archive) {
+//        return CompletableFuture.runAsync(() -> {
+//            try {
+//                processArchive(archive);
+//            } catch (Exception e) {
+//                // Handle exception and propagate it
+//                throw new RuntimeException(e);
+//            }
+//        });
+//    }
+//
+//    private Callable<Void> processArchiveCallable(final File archive) {
+//        return () -> {
+//            return processArchiveVoid(archive);
+//        };
+//    }
+//
+//    private void processArchive(final File archive) throws MojoExecutionException {
+//        System.out.println("Processsing " + archive.getPath());
+//    }
+//
+//    void processArchives(List<File> archives) throws MojoExecutionException {
+//        int threadCount = 2;
+//        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+//        
+//        
+//        
+//        
+//        
+//        List<Callable<Void>> tasks =
+//                archives.stream().map(this::processArchiveCallable).collect(Collectors.toList());
+//
+////        List<CompletableFuture<Void>> completableFutures = archives.stream()
+////                        .map(archive -> CompletableFuture.supplyAsync(() -> processArchiveVoid(archive), executor))
+////                        .collect(Collectors.toList());
+//        List<CompletableFuture<Void>> completableFutures = archives.stream()
+//                        .map(archive -> CompletableFuture.runAsync(() -> processArchive(archive), executor)
+//                                .exceptionally(ex -> {
+//                                    throw new CompletionException(handleCheckedException(ex));
+//                                }))
+//                        .collect(Collectors.toList());        
+//        CompletableFuture<Void> allOf = CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+//        try {
+//            allOf.join();
+//        } catch (CompletionException e) {
+//            throw new MojoExecutionException("Error signing", e);
+//        } catch (CancellationException e) {
+//            throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
+//        } finally {
+//            executor.shutdown();
+//        } 
+//    }
+//
+//    private RuntimeException handleCheckedException(Throwable ex) {
+//        if (ex instanceof RuntimeException) {
+//            return (RuntimeException) ex;
+//        } else {
+//            return new RuntimeException(ex);
+//        }
+//    }
+//    
+//    private Void processArchiveVoid(final File archive) throws MojoExecutionException {
+//        processArchive(archive);
+//        return null;
+//    }    
+    
+    
+    /////
+    
+    
+    
 
     /**
      * Creates the jar signer request to be executed.
@@ -468,7 +588,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @throws NullPointerException if {@code archive} is {@code null}.
      * @throws MojoExecutionException if processing {@code archive} fails.
      */
-    private void processArchive(final File archive) throws MojoExecutionException {
+    private void processArchive2(final File archive) throws MojoExecutionException {
         if (archive == null) {
             throw new NullPointerException("archive");
         }
