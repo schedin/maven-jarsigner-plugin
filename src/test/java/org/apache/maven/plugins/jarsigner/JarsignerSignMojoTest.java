@@ -22,6 +22,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
@@ -34,6 +35,7 @@ import org.apache.maven.shared.jarsigner.JarSignerUtil;
 import org.apache.maven.shared.utils.cli.javatool.JavaToolException;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,6 +63,7 @@ public class JarsignerSignMojoTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    private Locale originalLocale;
     private MavenProject project = mock(MavenProject.class);
     private JarSigner jarSigner = mock(JarSigner.class);
     private File projectDir;
@@ -70,11 +73,18 @@ public class JarsignerSignMojoTest {
 
     @Before
     public void setUp() throws Exception {
+        originalLocale = Locale.getDefault();
+        Locale.setDefault(Locale.ENGLISH); // For English ResourceBundle to test log messages
         projectDir = folder.newFolder("dummy-project");
         mojoTestCreator =
                 new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, projectDir, jarSigner);
         log = mock(Log.class);
         mojoTestCreator.setLog(log);
+    }
+
+    @After
+    public void tearDown() {
+        Locale.setDefault(originalLocale);
     }
 
     /** Standard Java project with nothing special configured */
@@ -400,5 +410,17 @@ public class JarsignerSignMojoTest {
         verify(jarSigner)
                 .execute(MockitoHamcrest.argThat(
                         RequestMatchers.hasArguments(new String[] {"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
+    }
+
+    /** TODO */
+    @Test
+    public void testLoggingVerboseTrue() throws Exception {
+        // TODO
+    }
+
+    /** TODO */
+    @Test
+    public void testLoggingVerboseFalse() throws Exception {
+        // TODO
     }
 }
