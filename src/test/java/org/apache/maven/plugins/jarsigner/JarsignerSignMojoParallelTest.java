@@ -185,7 +185,7 @@ public class JarsignerSignMojoParallelTest {
             mojo.execute();
         });
 
-        assertThat(mojoException.getMessage(), containsString(String.valueOf("Some error")));
+        assertThat(mojoException.getMessage(), containsString(String.valueOf("Failed executing 'jarsigner ")));
     }
 
     private File createArchives(int numberOfArchives) throws IOException {
