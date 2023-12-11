@@ -343,7 +343,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     void processArchives(List<File> archives) throws MojoExecutionException {
-        int threadCount = 2;
+        int threadCount = 2; // TODO: Replace this with threadCound parameter
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         List<Future<Void>> futures = archives.stream()
                 .map(file -> executor.submit((Callable<Void>) () -> {
