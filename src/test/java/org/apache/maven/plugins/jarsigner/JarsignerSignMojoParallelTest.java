@@ -30,6 +30,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
@@ -40,7 +41,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -163,6 +167,25 @@ public class JarsignerSignMojoParallelTest {
         semaphore.release(); // Release the one waiting jar file
         future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
+    }
+
+    @Test(timeout = 30000)
+    public void test10Files2ParallelOneFail() throws Exception {
+        configuration.put("archiveDirectory", createArchives(10).getPath());
+        configuration.put("threadCount", "2");
+
+        when(jarSigner.execute(isA(JarSignerSignRequest.class)))
+                .thenReturn(RESULT_OK)
+                .thenReturn(RESULT_OK)
+                .thenReturn(RESULT_ERROR)
+                .thenReturn(RESULT_OK);
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        MojoExecutionException mojoException = assertThrows(MojoExecutionException.class, () -> {
+            mojo.execute();
+        });
+
+        assertThat(mojoException.getMessage(), containsString(String.valueOf("Some error")));
     }
 
     private File createArchives(int numberOfArchives) throws IOException {
