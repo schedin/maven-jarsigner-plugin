@@ -27,11 +27,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
@@ -345,29 +345,23 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     void processArchives(List<File> archives) throws MojoExecutionException {
         int threadCount = 2;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-
-        List<CompletableFuture<Void>> futures =
-            archives.stream()
-                .map(file -> CompletableFuture.runAsync(() -> {
-                    try {
-                        processArchive(file);
-                    } catch (MojoExecutionException e) {
-                        executor.shutdownNow();
-                        throw new CompletionException(e);
-                    }
-                }, executor))
+        List<Future<Void>> futures = archives.stream()
+                .map(file -> executor.submit((Callable<Void>) () -> {
+                    processArchive(file);
+                    return null;
+                }))
                 .collect(Collectors.toList());
-
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         try {
-            allOf.join();
-        } catch (CompletionException e) {
-            if (e.getCause() instanceof MojoExecutionException) {
-                throw (MojoExecutionException)e.getCause();
+            for (Future<Void> future : futures) {
+                future.get(); // Wait for completion, ignore result but expose any Exception
             }
-            throw new MojoExecutionException("Error processing archives", e);
-        } catch (CancellationException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof MojoExecutionException) {
+                throw (MojoExecutionException) e.getCause();
+            }
         } finally {
             executor.shutdown();
         }
