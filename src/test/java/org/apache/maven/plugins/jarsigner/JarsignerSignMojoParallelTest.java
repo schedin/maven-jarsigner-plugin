@@ -23,13 +23,14 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -58,6 +59,7 @@ public class JarsignerSignMojoParallelTest {
     private Map<String, String> configuration = new LinkedHashMap<>();
     private MojoTestCreator<JarsignerSignMojo> mojoTestCreator;
     private ExecutorService executor;
+    private Log log;
 
     @Before
     public void setUp() throws Exception {
@@ -65,6 +67,8 @@ public class JarsignerSignMojoParallelTest {
         configuration.put("processMainArtifact", "false");
         mojoTestCreator =
                 new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, projectDir, jarSigner);
+        log = mock(Log.class);
+        mojoTestCreator.setLog(log);
         executor =
                 Executors.newSingleThreadExecutor(namedThreadFactory(getClass().getSimpleName()));
     }
@@ -79,13 +83,10 @@ public class JarsignerSignMojoParallelTest {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
 
-        CountDownLatch latch = new CountDownLatch(1);
+        // Make one jar file wait until some external event happens and let nine pass
+        Semaphore semaphore = new Semaphore(9);
         when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
-            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
-            // Make one jar file wait until some external event happens
-            if (request.getArchive().getPath().endsWith("archive2.jar")) {
-                latch.await();
-            }
+            semaphore.acquire();
             return RESULT_OK;
         });
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -100,24 +101,20 @@ public class JarsignerSignMojoParallelTest {
         // Even though 10 invocations to execute() has happened, mojo is not yet done executing (it is waiting for one)
         assertFalse(future.isDone());
 
-        latch.countDown(); // Release the one waiting jar file
+        semaphore.release(); // Release the one waiting jar file
         future.get(100, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
     }
 
-    
     @Test(timeout = 30000) // TODO: change timeout before merge
-    public void test10Files2Parallel2Hanging() throws Exception {
+    public void test10Files2Parallel3Hanging() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
 
-        CountDownLatch latch = new CountDownLatch(2);
+        // Make three jar files wait until some external event happens and let eight pass
+        Semaphore semaphore = new Semaphore(7);
         when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
-            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
-            // Make one jar file wait until some external event happens
-            if (request.getArchive().getPath().endsWith("archive2.jar") || request.getArchive().getPath().endsWith("archive3.jar")) {
-                latch.await(); //TODO: This does not work. Switch to Semaphore
-            }
+            semaphore.acquire();
             return RESULT_OK;
         });
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -127,32 +124,29 @@ public class JarsignerSignMojoParallelTest {
             return null;
         });
 
-        // Wait until 4 invocation to execute has happened (0 and 1 has finished and 2 and 3 are hanging)
-        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(4)).execute(any());
+        // Wait until 9 invocation to execute has happened (2 is ongoing and 1 has not yet happened)
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(9)).execute(any());
         assertFalse(future.isDone());
 
-        latch.countDown(); // Release the one waiting jar file
-        
-        // Wait until 10 invocation to execute has happened (nine files are done and one are hanging)
+        semaphore.release(); // Release one waiting jar file
+
+        // Wait until 10 invocation to execute has happened (8 files are done and 2 are hanging)
         verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
-        
-        latch.countDown(); // Release last
+
+        semaphore.release(2); // Release last two jar files
         future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
     }
-    
+
     @Test(timeout = 30000) // TODO: change timeout before merge
     public void test10Files1Parallel() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "1");
 
-        CountDownLatch latch = new CountDownLatch(1);
+        // Make one jar file wait until some external event happens and let nine pass
+        Semaphore semaphore = new Semaphore(9);
         when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
-            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArgument(0);
-            // Make one jar file wait until some external event happens
-            if (request.getArchive().getPath().endsWith("archive2.jar")) {
-                latch.await();
-            }
+            semaphore.acquire();
             return RESULT_OK;
         });
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -166,7 +160,7 @@ public class JarsignerSignMojoParallelTest {
         verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
         assertFalse(future.isDone());
 
-        latch.countDown(); // Release the one waiting jar file
+        semaphore.release(); // Release the one waiting jar file
         future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
     }

@@ -354,11 +354,10 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                 }
                 processed += numberOfprocessed.get();
 
-                
-//                for (File jarFile : jarFiles) {
-//                    processArchive(jarFile);
-//                    processed++;
-//                }
+                // for (File jarFile : jarFiles) {
+                //    processArchive(jarFile);
+                //    processed++;
+                // }
             }
         }
 
