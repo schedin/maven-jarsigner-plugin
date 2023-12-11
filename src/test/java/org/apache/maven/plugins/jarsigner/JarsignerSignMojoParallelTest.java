@@ -111,7 +111,7 @@ public class JarsignerSignMojoParallelTest {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
 
-        // Make three jar files wait until some external event happens and let eight pass
+        // Make three jar files wait until some external event happens and let seven pass
         Semaphore semaphore = new Semaphore(7);
         when(jarSigner.execute(isA(JarSignerSignRequest.class))).then(invocation -> {
             semaphore.acquire();
@@ -124,13 +124,13 @@ public class JarsignerSignMojoParallelTest {
             return null;
         });
 
-        // Wait until 9 invocation to execute has happened (2 is ongoing and 1 has not yet happened)
+        // Wait until 9 invocations to execute has happened (2 is ongoing and 1 has not yet happened)
         verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(9)).execute(any());
         assertFalse(future.isDone());
 
         semaphore.release(); // Release one waiting jar file
 
-        // Wait until 10 invocation to execute has happened (8 files are done and 2 are hanging)
+        // Wait until 10 invocation to execute has happened (8 are done and 2 are hanging)
         verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
 
         semaphore.release(2); // Release last two jar files
