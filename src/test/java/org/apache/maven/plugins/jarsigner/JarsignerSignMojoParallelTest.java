@@ -78,7 +78,7 @@ public class JarsignerSignMojoParallelTest {
         executor.shutdown();
     }
 
-    @Test(timeout = 300000) // TODO: change timeout before merge
+    @Test(timeout = 30000)
     public void test10Files2Parallel() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
@@ -97,16 +97,16 @@ public class JarsignerSignMojoParallelTest {
         });
 
         // Wait until 10 invocation to execute has happened (nine files are done and one are hanging)
-        verify(jarSigner, timeout(Duration.ofSeconds(100).toMillis()).times(10)).execute(any());
+        verify(jarSigner, timeout(Duration.ofSeconds(10).toMillis()).times(10)).execute(any());
         // Even though 10 invocations to execute() has happened, mojo is not yet done executing (it is waiting for one)
         assertFalse(future.isDone());
 
         semaphore.release(); // Release the one waiting jar file
-        future.get(100, TimeUnit.SECONDS); // Wait for entire Mojo to finish
+        future.get(10, TimeUnit.SECONDS); // Wait for entire Mojo to finish
         assertTrue(future.isDone());
     }
 
-    @Test(timeout = 30000) // TODO: change timeout before merge
+    @Test(timeout = 30000)
     public void test10Files2Parallel3Hanging() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "2");
@@ -138,7 +138,7 @@ public class JarsignerSignMojoParallelTest {
         assertTrue(future.isDone());
     }
 
-    @Test(timeout = 30000) // TODO: change timeout before merge
+    @Test(timeout = 30000)
     public void test10Files1Parallel() throws Exception {
         configuration.put("archiveDirectory", createArchives(10).getPath());
         configuration.put("threadCount", "1");
