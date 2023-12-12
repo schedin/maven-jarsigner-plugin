@@ -21,6 +21,13 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -182,6 +189,39 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         // Special handling for passwords through the Maven Security Dispatcher
         request.setKeypass(decrypt(keypass));
         return request;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Processing of files may be parallelized for increased performance.
+     */
+    @Override
+    protected void processArchives(List<File> archives) throws MojoExecutionException {
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        List<Future<Void>> futures = archives.stream()
+                .map(file -> executor.submit((Callable<Void>) () -> {
+                    processArchive(file);
+                    return null;
+                }))
+                .collect(Collectors.toList());
+        try {
+            for (Future<Void> future : futures) {
+                future.get(); // Wait for completion, ignore result but expose any Exception
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            executor.shutdownNow();
+            throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
+        } catch (ExecutionException e) {
+            executor.shutdownNow();
+            if (e.getCause() instanceof MojoExecutionException) {
+                throw (MojoExecutionException) e.getCause();
+            }
+            throw new MojoExecutionException("Error processing archives", e);
+        } finally {
+            executor.shutdown();
+        }
     }
 
     /**

@@ -27,12 +27,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
@@ -342,31 +336,15 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
         getLog().info(getMessage("processed", processed));
     }
 
-    void processArchives(List<File> archives) throws MojoExecutionException {
-        int threadCount = 2; // TODO: Replace this with threadCound parameter
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        List<Future<Void>> futures = archives.stream()
-                .map(file -> executor.submit((Callable<Void>) () -> {
-                    processArchive(file);
-                    return null;
-                }))
-                .collect(Collectors.toList());
-        try {
-            for (Future<Void> future : futures) {
-                future.get(); // Wait for completion, ignore result but expose any Exception
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            executor.shutdownNow();
-            throw new MojoExecutionException("Thread interrupted while waiting for jarsigner to complete", e);
-        } catch (ExecutionException e) {
-            executor.shutdownNow();
-            if (e.getCause() instanceof MojoExecutionException) {
-                throw (MojoExecutionException) e.getCause();
-            }
-            throw new MojoExecutionException("Error processing archives", e);
-        } finally {
-            executor.shutdown();
+    /**
+     * Process (sign/verify) a list of archives.
+     *
+     * @param archives list of jar files to process
+     * @throws MojoExecutionException If an error occurs during the processing of archives.
+     */
+    protected void processArchives(List<File> archives) throws MojoExecutionException {
+        for (File archive : archives) {
+            processArchive(archive);
         }
     }
 
@@ -474,7 +452,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @throws NullPointerException if {@code archive} is {@code null}.
      * @throws MojoExecutionException if processing {@code archive} fails.
      */
-    private void processArchive(final File archive) throws MojoExecutionException {
+    protected final void processArchive(final File archive) throws MojoExecutionException {
         if (archive == null) {
             throw new NullPointerException("archive");
         }
