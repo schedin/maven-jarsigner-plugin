@@ -30,6 +30,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -47,11 +48,9 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class JarsignerSignMojoParallelTest {
     @Rule
@@ -186,6 +185,22 @@ public class JarsignerSignMojoParallelTest {
         });
 
         assertThat(mojoException.getMessage(), containsString(String.valueOf("Failed executing 'jarsigner ")));
+    }
+
+    @Test
+    public void testInvalidThreadCount() throws Exception {
+        Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("processMainArtifact", "true");
+        configuration.put("threadCount", "0"); // Setting an "invalid" value
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner, times(1)).execute(any());
+        verify(log).warn(contains("Invalid threadCount value"));
+        verify(log).warn(contains("Was '0'"));
     }
 
     private File createArchives(int numberOfArchives) throws IOException {

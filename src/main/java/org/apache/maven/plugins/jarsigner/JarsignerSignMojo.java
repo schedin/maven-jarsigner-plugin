@@ -173,6 +173,11 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             getLog().warn(getMessage("invalidMaxRetryDelaySeconds", maxRetryDelaySeconds));
             maxRetryDelaySeconds = 0;
         }
+
+        if (threadCount < 1) {
+            getLog().warn(getMessage("invalidThreadCount", threadCount));
+            threadCount = 1;
+        }        
     }
 
     /**
@@ -192,9 +197,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * Processing of files may be parallelized for increased performance.
+     * {@inheritDoc} Processing of files may be parallelized for increased performance.
      */
     @Override
     protected void processArchives(List<File> archives) throws MojoExecutionException {
