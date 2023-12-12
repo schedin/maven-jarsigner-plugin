@@ -123,9 +123,10 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     private int maxRetryDelaySeconds;
 
     /**
-     * How many threads to use (in parallel) when signing jar files. This option may be desirable
-     * if any network operations are used during signing, for example using a Time Stamp Authority
-     * or network based PKCS11 HSM solution for storing code signing keys.
+     * How many threads to use (in parallel) when signing jar files. Increases performing when signing multiple jar
+     * files, especially when network operations are used during signing, for example when using a Time Stamp Authority
+     * or network based PKCS11 HSM solution for storing code signing keys. Note: the logging from the signing process
+     * will be interleaved, and harder to read, when using many threads.
      *
      * @since 3.1.0
      */
