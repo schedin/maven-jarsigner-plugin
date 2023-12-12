@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 import org.apache.maven.artifact.Artifact;
@@ -291,7 +292,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             processArchive(this.archive);
         } else {
             if (processMainArtifact) {
-                processArtifact(this.project.getArtifact());
+                getFileFromArtifact(this.project.getArtifact()).ifPresent(archives::add);
             }
 
             if (processAttachedArtifacts) {
@@ -314,7 +315,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                         continue;
                     }
 
-                    processArtifact(artifact);
+                    getFileFromArtifact(artifact).ifPresent(archives::add);
                 }
             } else {
                 if (verbose) {
@@ -387,33 +388,27 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /**
-     * Processes a given artifact.
+     * Examines an Artifact and extract the File object pointing to the Artifact jar file.
      *
-     * @param artifact The artifact to process.
-     * @return <code>true</code> if the artifact is a JAR and was processed, <code>false</code> otherwise.
-     * @throws NullPointerException if {@code artifact} is {@code null}.
-     * @throws MojoExecutionException if processing {@code artifact} fails.
+     * @param artifact the artifact to examine
+     * @return An Optional containing the File, or Optional.empty() if the File is not a jar file.
+     * @throws NullPointerException if {@code artifact} is {@code null}
      */
-    private boolean processArtifact(final Artifact artifact) throws MojoExecutionException {
+    public Optional<File> getFileFromArtifact(final Artifact artifact) {
         if (artifact == null) {
             throw new NullPointerException("artifact");
         }
 
-        boolean processed = false;
-
         if (isZipFile(artifact)) {
-            processArchive(artifact.getFile());
-
-            processed = true;
-        } else {
-            if (this.verbose) {
-                getLog().info(getMessage("unsupported", artifact));
-            } else if (getLog().isDebugEnabled()) {
-                getLog().debug(getMessage("unsupported", artifact));
-            }
+            return Optional.of(artifact.getFile());
         }
 
-        return processed;
+        if (this.verbose) {
+            getLog().info(getMessage("unsupported", artifact));
+        } else if (getLog().isDebugEnabled()) {
+            getLog().debug(getMessage("unsupported", artifact));
+        }
+        return Optional.empty();
     }
 
     /**
