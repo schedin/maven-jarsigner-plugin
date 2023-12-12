@@ -286,7 +286,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
     }
 
     /**
-     * Finds all jar files, by looking at the Maven project configuration and user configuration.
+     * Finds all jar files, by looking at the Maven project and user configuration.
      *
      * @return a List of File objects
      * @throws MojoExecutionException if it was not possible to build a list of jar files.
