@@ -52,6 +52,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -412,15 +413,53 @@ public class JarsignerSignMojoTest {
                         RequestMatchers.hasArguments(new String[] {"-J-Dfile.encoding=ISO-8859-1", "argument2"})));
     }
 
-    /** TODO */
+    /**
+     * Test what is logged when verbose=true. The sign-mojo.html documentation indicates that the verbose flag should
+     * be sent in to the jarsigner command. That is true, bit in addotion to this it is also (undocumented) used to
+     * control the level of some logging events.
+     */
     @Test
     public void testLoggingVerboseTrue() throws Exception {
-        // TODO
+        when(log.isDebugEnabled()).thenReturn(true);
+        Artifact mainArtifact = TestArtifacts.createPomArtifact(projectDir, "pom.xml");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        configuration.put("processAttachedArtifacts", "false");
+        File archiveDirectory = new File(projectDir, "my_archive_dir");
+        archiveDirectory.mkdir();
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
+        configuration.put("archiveDirectory", archiveDirectory.getPath());
+        configuration.put("verbose", "true");
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log, times(1)).info(contains("Unsupported artifact "));
+        verify(log, times(1)).info(contains("Forcibly ignoring attached artifacts"));
+        verify(log, times(1)).info(contains("Processing "));
+        verify(log, times(1)).info(contains("0 archive(s) processed"));
     }
 
-    /** TODO */
+    /** Test what is logged when verbose=false */
     @Test
     public void testLoggingVerboseFalse() throws Exception {
-        // TODO
+        when(log.isDebugEnabled()).thenReturn(true);
+        Artifact mainArtifact = TestArtifacts.createPomArtifact(projectDir, "pom.xml");
+        when(project.getArtifact()).thenReturn(mainArtifact);
+        configuration.put("processAttachedArtifacts", "false");
+        File archiveDirectory = new File(projectDir, "my_archive_dir");
+        archiveDirectory.mkdir();
+        TestArtifacts.createDummyZipFile(new File(archiveDirectory, "archive1.jar"));
+        configuration.put("archiveDirectory", archiveDirectory.getPath());
+        configuration.put("verbose", "false");
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log, times(1)).debug(contains("Unsupported artifact "));
+        verify(log, times(1)).debug(contains("Forcibly ignoring attached artifacts"));
+        verify(log, times(1)).debug(contains("Processing "));
+        verify(log, times(1)).info(contains("0 archive(s) processed"));
     }
 }
