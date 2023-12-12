@@ -280,62 +280,69 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             jarSigner.setToolchain(toolchain);
         }
 
-        List<File> archives = findArchivesToProcess();
+        List<File> archives = findJarfiles();
         processArchives(archives);
         getLog().info(getMessage("processed", archives.size()));
     }
 
-    private List<File> findArchivesToProcess() throws MojoExecutionException {
-        List<File> archives = new ArrayList<>();
-
+    /**
+     * Finds all jar files, by looking at the Maven project configuration and user configuration.
+     *
+     * @return a List of File objects
+     * @throws MojoExecutionException if it was not possible to build a list of jar files.
+     */
+    private List<File> findJarfiles() throws MojoExecutionException {
         if (this.archive != null) {
-            processArchive(this.archive);
+            // Only process this, but nothing more
+            return Arrays.asList(this.archive);
+        }
+
+        List<File> archives = new ArrayList<>();
+        if (processMainArtifact) {
+            getFileFromArtifact(this.project.getArtifact()).ifPresent(archives::add);
+        }
+
+        if (processAttachedArtifacts) {
+            Collection<String> includes = new HashSet<>();
+            if (includeClassifiers != null) {
+                includes.addAll(Arrays.asList(includeClassifiers));
+            }
+
+            Collection<String> excludes = new HashSet<>();
+            if (excludeClassifiers != null) {
+                excludes.addAll(Arrays.asList(excludeClassifiers));
+            }
+
+            for (Artifact artifact : this.project.getAttachedArtifacts()) {
+                if (!includes.isEmpty() && !includes.contains(artifact.getClassifier())) {
+                    continue;
+                }
+
+                if (excludes.contains(artifact.getClassifier())) {
+                    continue;
+                }
+
+                getFileFromArtifact(artifact).ifPresent(archives::add);
+            }
         } else {
-            if (processMainArtifact) {
-                getFileFromArtifact(this.project.getArtifact()).ifPresent(archives::add);
-            }
-
-            if (processAttachedArtifacts) {
-                Collection<String> includes = new HashSet<>();
-                if (includeClassifiers != null) {
-                    includes.addAll(Arrays.asList(includeClassifiers));
-                }
-
-                Collection<String> excludes = new HashSet<>();
-                if (excludeClassifiers != null) {
-                    excludes.addAll(Arrays.asList(excludeClassifiers));
-                }
-
-                for (Artifact artifact : this.project.getAttachedArtifacts()) {
-                    if (!includes.isEmpty() && !includes.contains(artifact.getClassifier())) {
-                        continue;
-                    }
-
-                    if (excludes.contains(artifact.getClassifier())) {
-                        continue;
-                    }
-
-                    getFileFromArtifact(artifact).ifPresent(archives::add);
-                }
+            if (verbose) {
+                getLog().info(getMessage("ignoringAttachments"));
             } else {
-                if (verbose) {
-                    getLog().info(getMessage("ignoringAttachments"));
-                } else {
-                    getLog().debug(getMessage("ignoringAttachments"));
-                }
-            }
-
-            if (archiveDirectory != null) {
-                String includeList = (includes != null) ? StringUtils.join(includes, ",") : null;
-                String excludeList = (excludes != null) ? StringUtils.join(excludes, ",") : null;
-
-                try {
-                    archives.addAll(FileUtils.getFiles(archiveDirectory, includeList, excludeList));
-                } catch (IOException e) {
-                    throw new MojoExecutionException("Failed to scan archive directory for JARs: " + e.getMessage(), e);
-                }
+                getLog().debug(getMessage("ignoringAttachments"));
             }
         }
+
+        if (archiveDirectory != null) {
+            String includeList = (includes != null) ? StringUtils.join(includes, ",") : null;
+            String excludeList = (excludes != null) ? StringUtils.join(excludes, ",") : null;
+
+            try {
+                archives.addAll(FileUtils.getFiles(archiveDirectory, includeList, excludeList));
+            } catch (IOException e) {
+                throw new MojoExecutionException("Failed to scan archive directory for JARs: " + e.getMessage(), e);
+            }
+        }
+
         return archives;
     }
 
@@ -383,7 +390,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @param artifact The artifact to check, may be <code>null</code>.
      * @return <code>true</code> if the artifact looks like a ZIP file, <code>false</code> otherwise.
      */
-    private boolean isZipFile(final Artifact artifact) {
+    private static boolean isZipFile(final Artifact artifact) {
         return artifact != null && artifact.getFile() != null && JarSignerUtil.isZipFile(artifact.getFile());
     }
 
@@ -394,7 +401,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      * @return An Optional containing the File, or Optional.empty() if the File is not a jar file.
      * @throws NullPointerException if {@code artifact} is {@code null}
      */
-    public Optional<File> getFileFromArtifact(final Artifact artifact) {
+    private Optional<File> getFileFromArtifact(final Artifact artifact) {
         if (artifact == null) {
             throw new NullPointerException("artifact");
         }
