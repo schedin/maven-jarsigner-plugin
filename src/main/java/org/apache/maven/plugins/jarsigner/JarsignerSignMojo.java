@@ -221,7 +221,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             }
             throw new MojoExecutionException("Error processing archives", e);
         } finally {
-            // Shutdown of executing threads. If an Exception occurred, remaining threads will be aborted "best effort"
+            // Shutdown of thread pool. If an Exception occurred, remaining threads will be aborted "best effort"
             executor.shutdownNow();
         }
     }
