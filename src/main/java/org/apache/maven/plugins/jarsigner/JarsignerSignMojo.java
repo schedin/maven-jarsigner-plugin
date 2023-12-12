@@ -177,7 +177,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         if (threadCount < 1) {
             getLog().warn(getMessage("invalidThreadCount", threadCount));
             threadCount = 1;
-        }        
+        }
     }
 
     /**
