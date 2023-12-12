@@ -437,7 +437,7 @@ public class JarsignerSignMojoTest {
         verify(log, times(1)).info(contains("Unsupported artifact "));
         verify(log, times(1)).info(contains("Forcibly ignoring attached artifacts"));
         verify(log, times(1)).info(contains("Processing "));
-        verify(log, times(1)).info(contains("0 archive(s) processed"));
+        verify(log, times(1)).info(contains("1 archive(s) processed"));
     }
 
     /** Test what is logged when verbose=false */
@@ -460,6 +460,6 @@ public class JarsignerSignMojoTest {
         verify(log, times(1)).debug(contains("Unsupported artifact "));
         verify(log, times(1)).debug(contains("Forcibly ignoring attached artifacts"));
         verify(log, times(1)).debug(contains("Processing "));
-        verify(log, times(1)).info(contains("0 archive(s) processed"));
+        verify(log, times(1)).info(contains("1 archive(s) processed"));
     }
 }
