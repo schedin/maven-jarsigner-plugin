@@ -279,14 +279,19 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
             jarSigner.setToolchain(toolchain);
         }
 
-        int processed = 0;
+        List<File> archives = findArchivesToProcess();
+        processArchives(archives);
+        getLog().info(getMessage("processed", archives.size()));
+    }
+
+    private List<File> findArchivesToProcess() throws MojoExecutionException {
+        List<File> archives = new ArrayList<>();
 
         if (this.archive != null) {
             processArchive(this.archive);
-            processed++;
         } else {
             if (processMainArtifact) {
-                processed += processArtifact(this.project.getArtifact()) ? 1 : 0;
+                processArtifact(this.project.getArtifact());
             }
 
             if (processAttachedArtifacts) {
@@ -309,7 +314,7 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                         continue;
                     }
 
-                    processed += processArtifact(artifact) ? 1 : 0;
+                    processArtifact(artifact);
                 }
             } else {
                 if (verbose) {
@@ -323,29 +328,14 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
                 String includeList = (includes != null) ? StringUtils.join(includes, ",") : null;
                 String excludeList = (excludes != null) ? StringUtils.join(excludes, ",") : null;
 
-                List<File> jarFiles;
                 try {
-                    jarFiles = FileUtils.getFiles(archiveDirectory, includeList, excludeList);
+                    archives.addAll(FileUtils.getFiles(archiveDirectory, includeList, excludeList));
                 } catch (IOException e) {
                     throw new MojoExecutionException("Failed to scan archive directory for JARs: " + e.getMessage(), e);
                 }
-                processArchives(jarFiles);
             }
         }
-
-        getLog().info(getMessage("processed", processed));
-    }
-
-    /**
-     * Process (sign/verify) a list of archives.
-     *
-     * @param archives list of jar files to process
-     * @throws MojoExecutionException If an error occurs during the processing of archives.
-     */
-    protected void processArchives(List<File> archives) throws MojoExecutionException {
-        for (File archive : archives) {
-            processArchive(archive);
-        }
+        return archives;
     }
 
     /**
@@ -443,6 +433,18 @@ public abstract class AbstractJarsignerMojo extends AbstractMojo {
      */
     protected void validateParameters() throws MojoExecutionException {
         // Default implementation does nothing
+    }
+
+    /**
+     * Process (sign/verify) a list of archives.
+     *
+     * @param archives list of jar files to process
+     * @throws MojoExecutionException If an error occurs during the processing of archives.
+     */
+    protected void processArchives(List<File> archives) throws MojoExecutionException {
+        for (File file : archives) {
+            processArchive(file);
+        }
     }
 
     /**
