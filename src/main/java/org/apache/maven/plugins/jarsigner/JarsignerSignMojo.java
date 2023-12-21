@@ -84,10 +84,10 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * <p>Alias(es) for a certificate in the active keystore used to find a TSA URL. From the certificate the X509v3
      * extension "Subject Information Access" field is examined to find the TSA server URL.</p>
-     * 
+     *
      * <p>Should not be used at the same time as the {@link #tsa} parameter (because jarsigner will typically ignore
      * tsacert, if tsa is set.</p>
-     * 
+     *
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
      *
      * @since 1.3
@@ -98,7 +98,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * An OID to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
      * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs.
-     * 
+     *
      * See
      * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html#CCHIFIAD">options</a>.
      *
@@ -108,11 +108,13 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     private String tsapolicyid;
 
     /**
-     * The message digest algorithm to use in the messageImprint that the TSA server will timestamp. For example {@code SHA-384}.
-     * "SHA-384". Only available in Java 11 and later. See <a href="https://docs.oracle.com/en/java/javase/11/tools/jarsigner.html">options</a>.
+     * The message digest algorithm to use in the messageImprint that the TSA server will timestamp. For example
+     * {@code SHA-384}. A default value will be selected by jarsigner if this parameter is not set. Only available in
+     * Java 11 and later. See <a href="https://docs.oracle.com/en/java/javase/11/tools/jarsigner.html">options</a>.
      *
      * @since 3.1.0
      */
+    @Parameter(property = "jarsigner.tsadigestalg")
     private String tsadigestalg;
 
     /**
@@ -214,6 +216,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         request.setTsaLocation(tsa);
         request.setTsaAlias(tsacert);
         request.setCertchain(certchain);
+        request.setTsapolicyid(tsapolicyid);
+        request.setTsadigestalg(tsadigestalg);
 
         // Special handling for passwords through the Maven Security Dispatcher
         request.setKeypass(decrypt(keypass));
