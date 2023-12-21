@@ -98,7 +98,7 @@ public class JarsignerSignMojoTsaTest {
         ArgumentCaptor<JarSignerSignRequest> requestArgument = ArgumentCaptor.forClass(JarSignerSignRequest.class);
         verify(jarSigner, times(3)).execute(requestArgument.capture());
         List<JarSignerSignRequest> requests = requestArgument.getAllValues();
-        assertThat(requests, everyItem(RequestMatchers.hasTsa("http://my-timestam.server.com")));
+        assertThat(requests, everyItem(RequestMatchers.hasTsa("http://my-timestamp.server.com")));
         assertThat(requests, everyItem(RequestMatchers.hasTsacert("mytsacertalias")));
         assertThat(requests, everyItem(RequestMatchers.hasTsaPolicyid("0.1.2.3.4")));
         assertThat(requests, everyItem(RequestMatchers.hasTsaDigestalg("SHA-384")));

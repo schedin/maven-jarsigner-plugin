@@ -100,7 +100,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     private String[] tsacert;
 
     /**
-     * An OID to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
+     * OID(s) to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
      * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs.
      *
      * See
@@ -109,7 +109,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
      * @since 3.1.0
      */
     @Parameter(property = "jarsigner.tsapolicyid")
-    private String tsapolicyid;
+    private String[] tsapolicyid;
 
     /**
      * The message digest algorithm to use in the messageImprint that the TSA server will timestamp. For example
@@ -224,7 +224,9 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             request.setTsaAlias(tsacert[0]);
         }
         request.setCertchain(certchain);
-        request.setTsapolicyid(tsapolicyid);
+        if (tsapolicyid != null && tsapolicyid.length > 0) {
+            request.setTsapolicyid(tsapolicyid[0]);
+        }
         request.setTsadigestalg(tsadigestalg);
 
         // Special handling for passwords through the Maven Security Dispatcher
