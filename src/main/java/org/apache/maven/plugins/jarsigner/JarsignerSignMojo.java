@@ -165,6 +165,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /** Current WaitStrategy, to allow for sleeping after a signing failure. */
     private WaitStrategy waitStrategy = this::defaultWaitStrategy;
 
+    private TsaSelector tsaSelector;
+
     /** Exponent limit for exponential wait after failure function. 2^20 = 1048576 sec ~= 12 days. */
     private static final int MAX_WAIT_EXPONENT_ATTEMPT = 20;
 
@@ -208,6 +210,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             getLog().warn(getMessage("invalidThreadCount", threadCount));
             threadCount = 1;
         }
+        
+        tsaSelector = new TsaSelector(tsa, tsacert, tsapolicyid, tsadigestalg);
     }
 
     /**
@@ -217,17 +221,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     protected JarSignerRequest createRequest(File archive) throws MojoExecutionException {
         JarSignerSignRequest request = new JarSignerSignRequest();
         request.setSigfile(sigfile);
-        if (tsa != null && tsa.length > 0) {
-            request.setTsaLocation(tsa[0]);
-        }
-        if (tsacert != null && tsacert.length > 0) {
-            request.setTsaAlias(tsacert[0]);
-        }
-        request.setCertchain(certchain);
-        if (tsapolicyid != null && tsapolicyid.length > 0) {
-            request.setTsapolicyid(tsapolicyid[0]);
-        }
-        request.setTsadigestalg(tsadigestalg);
+        tsaSelector.updateTsaParameters(request);
 
         // Special handling for passwords through the Maven Security Dispatcher
         request.setKeypass(decrypt(keypass));

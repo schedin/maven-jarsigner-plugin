@@ -18,10 +18,25 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
+import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+
 class TsaSelector {
     
     TsaSelector(String[] tsa, String[] tsacert, String[] tsapolicyid, String tsadigestalg) {
         
     }
 
+    void updateTsaParameters(JarSignerSignRequest request) {
+        if (tsa != null && tsa.length > 0) {
+            request.setTsaLocation(tsa[0]);
+        }
+        if (tsacert != null && tsacert.length > 0) {
+            request.setTsaAlias(tsacert[0]);
+        }
+        request.setCertchain(certchain);
+        if (tsapolicyid != null && tsapolicyid.length > 0) {
+            request.setTsapolicyid(tsapolicyid[0]);
+        }
+        request.setTsadigestalg(tsadigestalg);
+    }
 }
