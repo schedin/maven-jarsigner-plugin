@@ -51,6 +51,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.mock;
@@ -85,7 +86,7 @@ public class JarsignerSignMojoTsaTest {
     public void testAllTsaParameters() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         configuration.put("archiveDirectory", createArchives(2).getPath());
-        configuration.put("tsa", "http://my-timestam.server.com");
+        configuration.put("tsa", "http://my-timestamp.server.com");
         configuration.put("tsacert", "mytsacertalias"); // Normally you would not set both "tsacert alias" and "tsa url"
         configuration.put("tsapolicyid", "0.1.2.3.4");
         configuration.put("tsadigestalg", "SHA-384");
@@ -103,6 +104,20 @@ public class JarsignerSignMojoTsaTest {
         assertThat(requests, everyItem(RequestMatchers.hasTsaDigestalg("SHA-384")));
     }
 
+    @Test
+    public void testMutipleTsa() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR).thenReturn(RESULT_OK);
+        configuration.put("maxTries", "10");
+        configuration.put("tsa", "http://my-timestamp.server.com,http://other-timestamp.example.com");
+
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(jarSigner, times(1)).execute(argThat(request -> ((JarSignerSignRequest) request).getTsaLocation().equals("http://my-timestamp.server.com")));
+        verify(jarSigner, times(1)).execute(argThat(request -> ((JarSignerSignRequest) request).getTsaLocation().equals("http://other-timestamp.example.com")));
+    }
+    
     private File createArchives(int numberOfArchives) throws IOException {
         File archiveDirectory = new File(projectDir, "my_archive_dir");
         archiveDirectory.mkdir();
