@@ -76,24 +76,28 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
      * URL(s) to Time Stamping Authority (TSA) server(s) to use to timestamp the signing.
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
      *
+     * <p>Changed to a list since 3.1.0</p>
+     *
      * @since 1.3
      */
     @Parameter(property = "jarsigner.tsa")
-    private String tsa;
+    private String[] tsa;
 
     /**
      * <p>Alias(es) for a certificate in the active keystore used to find a TSA URL. From the certificate the X509v3
      * extension "Subject Information Access" field is examined to find the TSA server URL.</p>
      *
      * <p>Should not be used at the same time as the {@link #tsa} parameter (because jarsigner will typically ignore
-     * tsacert, if tsa is set.</p>
+     * tsacert, if tsa is set).</p>
      *
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
+     *
+     * <p>Changed to a list since 3.1.0</p>
      *
      * @since 1.3
      */
     @Parameter(property = "jarsigner.tsacert")
-    private String tsacert;
+    private String[] tsacert;
 
     /**
      * An OID to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
@@ -213,8 +217,12 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     protected JarSignerRequest createRequest(File archive) throws MojoExecutionException {
         JarSignerSignRequest request = new JarSignerSignRequest();
         request.setSigfile(sigfile);
-        request.setTsaLocation(tsa);
-        request.setTsaAlias(tsacert);
+        if (tsa != null && tsa.length > 0) {
+            request.setTsaLocation(tsa[0]);
+        }
+        if (tsacert != null && tsacert.length > 0) {
+            request.setTsaAlias(tsacert[0]);
+        }
         request.setCertchain(certchain);
         request.setTsapolicyid(tsapolicyid);
         request.setTsadigestalg(tsadigestalg);
