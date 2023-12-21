@@ -39,4 +39,8 @@ class TsaSelector {
         }
         request.setTsadigestalg(tsadigestalg);
     }
+    /** Representation of a single TSA server and the parameters to use for it */
+    private class TsaServer {
+        
+    }
 }
