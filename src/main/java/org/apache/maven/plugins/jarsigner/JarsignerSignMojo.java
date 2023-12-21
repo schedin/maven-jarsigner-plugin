@@ -276,7 +276,10 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
                 return;
             }
             if (attempt < maxTries - 1) { // If not last attempt
+                // TODO indicate error for the TsaServer
                 waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
+                // TODO select a new TsaServer
+                
             } else {
                 // Last attempt failed, use this failure as resulting failure
                 throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
