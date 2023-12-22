@@ -60,10 +60,6 @@ class TsaSelector {
     private final List<TsaServer> tsaServers;
 
     TsaSelector(String[] tsa, String[] tsacert, String[] tsapolicyid, String tsadigestalg) {
-        tsa = (tsa != null) ? tsa : new String[0];
-        tsacert = (tsacert != null) ? tsacert : new String[0];
-        tsapolicyid = (tsapolicyid != null) ? tsapolicyid : new String[0];
-
         List<TsaServer> tsaServersTmp = new ArrayList<>();
 
         for (int i = 0; i < Math.max(tsa.length, tsacert.length); i++) {

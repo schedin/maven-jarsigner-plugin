@@ -31,14 +31,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TsaSelectorTest {
-
+    private static final String[] EMPTY = new String[0];
     private TsaSelector tsaSelector;
     private TsaServer tsaServer;
     private ExecutorService executor;
 
     @Test
     public void testNullInit() {
-        tsaSelector = new TsaSelector(null, null, null, null);
+        tsaSelector = new TsaSelector(EMPTY, EMPTY, EMPTY, null);
         tsaServer = tsaSelector.getServer();
         assertNull(tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
@@ -56,7 +56,7 @@ public class TsaSelectorTest {
     @Test
     public void testFailureCount() {
         tsaSelector = new TsaSelector(
-                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, EMPTY, EMPTY, null);
 
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url1.com", tsaServer.getTsaUrl());
@@ -85,7 +85,7 @@ public class TsaSelectorTest {
         executor = Executors.newFixedThreadPool(2);
 
         tsaSelector = new TsaSelector(
-                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, EMPTY, EMPTY, null);
 
         // Register a single failure on the first URL so that the threads will use URL 2
         TsaServer serverThreadMain = tsaSelector.getServer();
@@ -130,7 +130,7 @@ public class TsaSelectorTest {
     @Test
     public void testDigestAlgoritm() {
         tsaSelector = new TsaSelector(
-                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, "SHA-512");
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, EMPTY, EMPTY, "SHA-512");
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url1.com", tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
@@ -148,7 +148,7 @@ public class TsaSelectorTest {
 
     @Test
     public void testKeyStoreAliasAndOid() {
-        tsaSelector = new TsaSelector(null, new String[] {"alias1", "alias2"}, new String[] {"1.1", "1.2"}, null);
+        tsaSelector = new TsaSelector(EMPTY, new String[] {"alias1", "alias2"}, new String[] {"1.1", "1.2"}, null);
         tsaServer = tsaSelector.getServer();
         assertNull(tsaServer.getTsaUrl());
         assertEquals("alias1", tsaServer.getTsaAlias());
