@@ -91,6 +91,9 @@ class TsaSelector {
 
     /**
      * Gets the next "best" TSA server to use.
+     * 
+     * Uses a "best effort" approach without any synchronization. It may not select the "snapshot-consistent" best TSA
+     * server, but good enough.
      */
     public TsaServer getServer() {
         TsaServer bestTsaServer = tsaServers.get(0);
