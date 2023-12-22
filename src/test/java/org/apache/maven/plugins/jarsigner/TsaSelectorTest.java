@@ -20,7 +20,6 @@ package org.apache.maven.plugins.jarsigner;
 
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,8 +94,8 @@ public class TsaSelectorTest {
         CountDownLatch doneSignal = new CountDownLatch(2); // Indication that both thread has gotten a server
         Semaphore semaphore = new Semaphore(0); // When the threads may continue executing after gotten a server
 
-        AtomicReference<TsaServer> serverThread1 = new AtomicReference();
-        AtomicReference<TsaServer> serverThread2 = new AtomicReference();
+        AtomicReference<TsaServer> serverThread1 = new AtomicReference<>();
+        AtomicReference<TsaServer> serverThread2 = new AtomicReference<>();
         executor.submit(() -> {
             serverThread1.set(tsaSelector.getServer());
             doneSignal.countDown();
@@ -112,7 +111,10 @@ public class TsaSelectorTest {
         
         doneSignal.await(); // Wait until both threads has gotten an TsaServer
         semaphore.release(2); // Release both threads waiting for the semaphore
-        
+
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+
         assertEquals("http://url1.com", serverThreadMain.getTsaUrl());
         assertEquals("http://url2.com", serverThread1.get().getTsaUrl());
         assertEquals("http://url2.com", serverThread2.get().getTsaUrl());
@@ -122,9 +124,6 @@ public class TsaSelectorTest {
 
         // Trigger a new failure, now URL 1 is best again.
         tsaSelector.registerFailure();
-        assertEquals("http://url3.com", tsaSelector.getServer().getTsaUrl());
-
-        executor.shutdown();
-        executor.awaitTermination(10, TimeUnit.SECONDS);
+        assertEquals("http://url1.com", tsaSelector.getServer().getTsaUrl());
     }
 }
