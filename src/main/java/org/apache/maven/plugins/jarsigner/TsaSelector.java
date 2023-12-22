@@ -83,10 +83,22 @@ class TsaSelector {
      * Gets the next "best" TSA server to use.
      */
     public TsaServer getServer() {
-        // TODO Auto-generated method stub
-        return null;
+        TsaServer bestTsaServer = tsaServers.get(0);
+        for (int i = 1; i < tsaServers.size(); i++) {
+            if (bestTsaServer.failureCount.get() > tsaServers.get(i).failureCount.get()) {
+                bestTsaServer = tsaServers.get(i);
+            }
+        }
+        currentTsaServer.set(bestTsaServer);
+        return bestTsaServer;
     }
 
+    /**
+     * Register that the current used TsaServer was involved in a jarsigner execution that failed. This could be a
+     * problem with the TsaServer, but it could also be other factors unrelated to the TsaServer. Regardless of the
+     * cause of the failure it is registered as a failure for the current used TsaServer to be used when determining the
+     * next TsaServer to try.
+     */
     public void registerFailure() {
         if (currentTsaServer.get() != null) {
             currentTsaServer.get().failureCount.incrementAndGet();
