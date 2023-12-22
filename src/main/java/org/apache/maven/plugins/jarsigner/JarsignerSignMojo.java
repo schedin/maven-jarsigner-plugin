@@ -33,6 +33,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.jarsigner.TsaSelector.TsaServer;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerRequest;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
@@ -221,13 +222,22 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     protected JarSignerRequest createRequest(File archive) throws MojoExecutionException {
         JarSignerSignRequest request = new JarSignerSignRequest();
         request.setSigfile(sigfile);
-        tsaSelector.updateTsaParameters(request);
+        updateJarSignerRequestWithTsa(request, tsaSelector.getNext());
+        request.setCertchain(certchain);
 
         // Special handling for passwords through the Maven Security Dispatcher
         request.setKeypass(decrypt(keypass));
         return request;
     }
 
+    /** Modifies JarSignerRequest with TSA parameters */
+    private void updateJarSignerRequestWithTsa(JarSignerSignRequest request, TsaServer tsaServer) {
+        request.setTsaLocation(tsaServer.getTsaUrl());
+        request.setTsaAlias(tsaServer.getTsaAlias());
+        request.setTsapolicyid(tsaServer.getTsaPolicyId());
+        request.setTsadigestalg(tsaServer.getTsaDigestAlt());
+    }
+    
     /**
      * {@inheritDoc} Processing of files may be parallelized for increased performance.
      */
