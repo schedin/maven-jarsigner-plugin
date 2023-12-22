@@ -138,6 +138,7 @@ public class JarsignerSignMojoTsaTest {
     @Test
     public void testVerifyUsageOfBothTsaAndTsacert() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("maxTries", "2");
         configuration.put("tsa", "http://my-timestamp.server.com");
         configuration.put("tsacert", "mytsacertalias");
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -150,6 +151,7 @@ public class JarsignerSignMojoTsaTest {
     @Test
     public void testVerifyUsageOfDifferentNumberOfTsapolicyidAndTsa() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("maxTries", "2");
         configuration.put("tsa", "http://my-timestamp1.server.com,http://my-timestamp2.server.com");
         configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
@@ -162,6 +164,7 @@ public class JarsignerSignMojoTsaTest {
     @Test
     public void testVerifyUsageOfDifferentNumberOfTsapolicyidAndTsacert() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("maxTries", "2");
         configuration.put("tsacert", "alias1,alisa2");
         configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
