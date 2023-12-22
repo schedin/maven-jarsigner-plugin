@@ -222,7 +222,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     protected JarSignerRequest createRequest(File archive) throws MojoExecutionException {
         JarSignerSignRequest request = new JarSignerSignRequest();
         request.setSigfile(sigfile);
-        updateJarSignerRequestWithTsa(request, tsaSelector.getNext());
+        updateJarSignerRequestWithTsa(request, tsaSelector.getServer());
         request.setCertchain(certchain);
 
         // Special handling for passwords through the Maven Security Dispatcher
@@ -247,7 +247,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         List<Future<Void>> futures = archives.stream()
                 .map(file -> executor.submit((Callable<Void>) () -> {
                     processArchive(file);
-                    return null;
+                    return null; // Return dummy value to conform with Void type
                 }))
                 .collect(Collectors.toList());
         try {
@@ -281,18 +281,18 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         for (int attempt = 0; attempt < maxTries; attempt++) {
             JavaToolResult result = jarSigner.execute(request);
             int resultCode = result.getExitCode();
-            Commandline commandLine = result.getCommandline();
             if (resultCode == 0) {
                 return;
             }
+            tsaSelector.registerFailure(); // Could be TSA server problem or something unrelated to TSA
+            
             if (attempt < maxTries - 1) { // If not last attempt
-                // TODO indicate error for the TsaServer
                 waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
-                // TODO select a new TsaServer
-                
+                updateJarSignerRequestWithTsa((JarSignerSignRequest) request, tsaSelector.getServer());
             } else {
                 // Last attempt failed, use this failure as resulting failure
-                throw new MojoExecutionException(getMessage("failure", getCommandlineInfo(commandLine), resultCode));
+                throw new MojoExecutionException(
+                    getMessage("failure", getCommandlineInfo(result.getCommandline()), resultCode));
             }
         }
     }
