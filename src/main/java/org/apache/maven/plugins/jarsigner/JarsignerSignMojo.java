@@ -73,42 +73,97 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.removeExistingSignatures", defaultValue = "false")
     private boolean removeExistingSignatures;
 
-    // TODO: fix documentation
     /**
-     * URL(s) to Time Stamping Authority (TSA) server(s) to use to timestamp the signing.
+     * <p>URL(s) to Time Stamping Authority (TSA) server(s) to use to timestamp the signing.
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
+     * </p>
      *
-     * <p>Changed to a list since 3.1.0</p>
+     * <p>Separate multiple TSA URLs with comma (without space) or a nested XML tag.</p>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsa>http://timestamp.digicert.com,http://timestamp.globalsign.com/tsa/r6advanced1</tsa>
+     * </configuration>
+     * }</pre>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsa>
+     *     <url>http://timestamp.digicert.com</url>
+     *     <url>http://timestamp.globalsign.com/tsa/r6advanced1</url>
+     *   </tsa>
+     * </configuration>
+     * }</pre>
+     *
+     * <p>Usage of multiple TSA servers only makes sense when {@link #maxTries} is more than 1. A different TSA server
+     * will only be used at retries.</p>
+     *
+     * <p>Changed to a list since 3.1.0. Single element (without comma) is still supported.</p>
      *
      * @since 1.3
      */
     @Parameter(property = "jarsigner.tsa")
     private String[] tsa;
 
-    // TODO: fix documentation
     /**
-     * <p>Alias(es) for a certificate in the active keystore used to find a TSA URL. From the certificate the X509v3
-     * extension "Subject Information Access" field is examined to find the TSA server URL.</p>
+     * <p>Alias(es) for certificate(s) in the active keystore used to find a TSA URL. From the certificate the X509v3
+     * extension "Subject Information Access" field is examined to find the TSA server URL. See
+     * <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.</p>
+     *
+     * <p>Separate multiple aliases with comma (without space) or a nested XML tag.</p>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsacert>alias1,alias2</tsacert>
+     * </configuration>
+     * }</pre>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsacert>
+     *     <alias>alias1</alias>
+     *     <alias>alias2</alias>
+     *   </tsacert>
+     * </configuration>
+     * }</pre>
      *
      * <p>Should not be used at the same time as the {@link #tsa} parameter (because jarsigner will typically ignore
      * tsacert, if tsa is set).</p>
      *
-     * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
+     * <p>Usage of multiple aliases only makes sense when {@link #maxTries} is more than 1. A different TSA server
+     * will only be used at retries.</p>
      *
-     * <p>Changed to a list since 3.1.0</p>
+     * <p>Changed to a list since 3.1.0. Single element (without comma) is still supported.</p>
      *
      * @since 1.3
      */
     @Parameter(property = "jarsigner.tsacert")
     private String[] tsacert;
 
-    // TODO: fix documentation
     /**
-     * OID(s) to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
-     * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs.
+     * <p>OID(s) to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
+     * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs. See
+     * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html#CCHIFIAD">options</a>.</p>
      *
-     * See
-     * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html#CCHIFIAD">options</a>.
+     * <p>Separate multiple OIDs with comma (without space) or a nested XML tag.</p>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsapolicyid>1.3.6.1.4.1.4146.2.3.1.2,2.16.840.1.114412.7.1</tsapolicyid>
+     * </configuration>
+     * }</pre>
+     *
+     * <pre>{@code
+     * <configuration>
+     *   <tsapolicyid>
+     *     <oid>1.3.6.1.4.1.4146.2.3.1.2</oid>
+     *     <oid>2.16.840.1.114412.7.1</oid>
+     *   </tsapolicyid>
+     * </configuration>
+     * }</pre>
+     *
+     * <p>If used, the number of OIDs should be the same as the number of elements in {@link #tsa} or {@link #tsacert}.
+     * The first OID will be used for the first TSA server, the second OID for the second TSA server and so on.</p>
      *
      * @since 3.1.0
      */
