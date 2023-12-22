@@ -56,11 +56,22 @@ class TsaSelector {
     /** The current TsaServer in use (if any). One per thread */
     private final ThreadLocal<TsaServer> currentTsaServer = new ThreadLocal<>();
 
-    /** List of TSA servers. Will at minimum contain a dummy value */
+    /** List of TSA servers. Will at minimum contain a dummy/empty value */
     private final List<TsaServer> tsaServers;
 
     TsaSelector(String[] tsa, String[] tsacert, String[] tsapolicyid, String tsadigestalg) {
+        tsa = (tsa != null) ? tsa : new String[0];
+        tsacert = (tsacert != null) ? tsacert : new String[0];
+        tsapolicyid = (tsapolicyid != null) ? tsapolicyid : new String[0];
+        
         List<TsaServer> tsaServersTmp = new ArrayList<>();
+        
+        for (int i == 0; i < ) // TODO
+        
+        
+        if (tsaServersTmp.isEmpty()) {
+            tsaServersTmp.add(TsaServer.EMPTY);
+        }
         this.tsaServers = Collections.unmodifiableList(tsaServersTmp);
     }
 
