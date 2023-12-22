@@ -73,6 +73,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.removeExistingSignatures", defaultValue = "false")
     private boolean removeExistingSignatures;
 
+    // TODO: fix documentation
     /**
      * URL(s) to Time Stamping Authority (TSA) server(s) to use to timestamp the signing.
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
@@ -84,6 +85,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.tsa")
     private String[] tsa;
 
+    // TODO: fix documentation
     /**
      * <p>Alias(es) for a certificate in the active keystore used to find a TSA URL. From the certificate the X509v3
      * extension "Subject Information Access" field is examined to find the TSA server URL.</p>
@@ -100,6 +102,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     @Parameter(property = "jarsigner.tsacert")
     private String[] tsacert;
 
+    // TODO: fix documentation
     /**
      * OID(s) to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
      * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs.
@@ -211,7 +214,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             getLog().warn(getMessage("invalidThreadCount", threadCount));
             threadCount = 1;
         }
-
+        // TODO: fix validation
         tsaSelector = new TsaSelector(tsa, tsacert, tsapolicyid, tsadigestalg);
     }
 

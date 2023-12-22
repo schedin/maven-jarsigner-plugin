@@ -122,6 +122,8 @@ public class JarsignerSignMojoTsaTest {
         assertEquals("http://other-timestamp.example.com", tsaUrls.get(1));
     }
 
+    // TODO: Add verification tests
+
     private File createArchives(int numberOfArchives) throws IOException {
         File archiveDirectory = new File(projectDir, "my_archive_dir");
         archiveDirectory.mkdir();
