@@ -31,7 +31,7 @@ import org.apache.maven.plugins.jarsigner.TsaSelector.TsaServer;
 import org.junit.Test;
 
 public class TsaSelectorTest {
-    
+
     private TsaSelector tsaSelector;
     private TsaServer tsaServer;
     private ExecutorService executor;
@@ -63,9 +63,9 @@ public class TsaSelectorTest {
         assertNull(tsaServer.getTsaAlias());
         assertNull(tsaServer.getTsaPolicyId());
         assertNull(tsaServer.getTsaDigestAlt());
-        
+
         tsaSelector.registerFailure();
-        
+
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url2.com", tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
@@ -86,7 +86,7 @@ public class TsaSelectorTest {
 
         tsaSelector = new TsaSelector(
             new String[]{"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
-        
+
         // Register a single failure on the first URL so that the threads will use URL 2
         TsaServer serverThreadMain = tsaSelector.getServer();
         tsaSelector.registerFailure();
@@ -108,7 +108,7 @@ public class TsaSelectorTest {
             semaphore.acquireUninterruptibly();
             tsaSelector.registerFailure();
         });
-        
+
         doneSignal.await(); // Wait until both threads has gotten an TsaServer
         semaphore.release(2); // Release both threads waiting for the semaphore
 
@@ -118,12 +118,58 @@ public class TsaSelectorTest {
         assertEquals("http://url1.com", serverThreadMain.getTsaUrl());
         assertEquals("http://url2.com", serverThread1.get().getTsaUrl());
         assertEquals("http://url2.com", serverThread2.get().getTsaUrl());
-        
+
         // The next best URL is number 3
         assertEquals("http://url3.com", tsaSelector.getServer().getTsaUrl());
 
         // Trigger a new failure, now URL 1 is best again.
         tsaSelector.registerFailure();
         assertEquals("http://url1.com", tsaSelector.getServer().getTsaUrl());
+    }
+
+    @Test
+    public void testDigestAlgoritm() {
+        tsaSelector = new TsaSelector(new String[]{"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, "SHA-512");
+        tsaServer = tsaSelector.getServer();
+        assertEquals("http://url1.com", tsaServer.getTsaUrl());
+        assertNull(tsaServer.getTsaAlias());
+        assertNull(tsaServer.getTsaPolicyId());
+        assertEquals("SHA-512", tsaServer.getTsaDigestAlt());
+
+        //Make sure that the next URL has the same digest algorithm
+        tsaSelector.registerFailure();
+        tsaServer = tsaSelector.getServer();
+        assertEquals("http://url2.com", tsaServer.getTsaUrl());
+        assertNull(tsaServer.getTsaAlias());
+        assertNull(tsaServer.getTsaPolicyId());
+        assertEquals("SHA-512", tsaServer.getTsaDigestAlt());
+    }
+
+    @Test
+    public void testKeyStoreAliasAndOid() {
+        tsaSelector = new TsaSelector(null, new String[]{"alias1", "alias2"}, new String[]{"1.1", "1.2"}, null);
+        tsaServer = tsaSelector.getServer();
+        assertNull(tsaServer.getTsaUrl());
+        assertEquals("alias1", tsaServer.getTsaAlias());
+        assertEquals("1.1", tsaServer.getTsaPolicyId());
+
+        tsaSelector.registerFailure();
+        tsaServer = tsaSelector.getServer();
+        assertNull(tsaServer.getTsaUrl());
+        assertEquals("alias2", tsaServer.getTsaAlias());
+        assertEquals("1.2", tsaServer.getTsaPolicyId());
+    }
+
+    @Test
+    public void testFailureRegistrationWithoutCurrent() {
+        tsaSelector = new TsaSelector(new String[]{"http://url1.com"}, new String[]{"alias1"}, new String[]{"1.1"}, "SHA-384");
+        tsaSelector.registerFailure(); // Should not throw any exception
+
+        // Make sure further execution works
+        tsaServer = tsaSelector.getServer();
+        assertEquals("http://url1.com", tsaServer.getTsaUrl());
+        assertEquals("alias1", tsaServer.getTsaAlias());
+        assertEquals("1.1", tsaServer.getTsaPolicyId());
+        assertEquals("SHA-384", tsaServer.getTsaDigestAlt());
     }
 }

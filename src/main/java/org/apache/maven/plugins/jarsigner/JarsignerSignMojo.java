@@ -211,7 +211,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             getLog().warn(getMessage("invalidThreadCount", threadCount));
             threadCount = 1;
         }
-        
+
         tsaSelector = new TsaSelector(tsa, tsacert, tsapolicyid, tsadigestalg);
     }
 
@@ -237,7 +237,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
         request.setTsapolicyid(tsaServer.getTsaPolicyId());
         request.setTsadigestalg(tsaServer.getTsaDigestAlt());
     }
-    
+
     /**
      * {@inheritDoc} Processing of files may be parallelized for increased performance.
      */
@@ -285,7 +285,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
                 return;
             }
             tsaSelector.registerFailure(); // Could be TSA server problem or something unrelated to TSA
-            
+
             if (attempt < maxTries - 1) { // If not last attempt
                 waitStrategy.waitAfterFailure(attempt, Duration.ofSeconds(maxRetryDelaySeconds));
                 updateJarSignerRequestWithTsa((JarSignerSignRequest) request, tsaSelector.getServer());

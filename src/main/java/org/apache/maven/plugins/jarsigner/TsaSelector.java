@@ -63,9 +63,9 @@ class TsaSelector {
         tsa = (tsa != null) ? tsa : new String[0];
         tsacert = (tsacert != null) ? tsacert : new String[0];
         tsapolicyid = (tsapolicyid != null) ? tsapolicyid : new String[0];
-        
+
         List<TsaServer> tsaServersTmp = new ArrayList<>();
-        
+
         for (int i = 0; i < Math.max(tsa.length, tsacert.length); i++) {
             String tsaUrl = i < tsa.length ? tsa[i] : null;
             String tsaAlias = i < tsacert.length ? tsacert[i] : null;
@@ -81,7 +81,7 @@ class TsaSelector {
 
     /**
      * Gets the next "best" TSA server to use.
-     * 
+     *
      * Uses a "best effort" approach without any synchronization. It may not select the "snapshot-consistent" best TSA
      * server, but good enough.
      */
