@@ -186,13 +186,13 @@ class RequestMatchers {
     }
 
     static TypeSafeMatcher<JarSignerSignRequest> hasTsaPolicyid(String tsapolicyid) {
-        return new JarSignerSignRequestMatcher(
-                "has tsapolicyid ", tsapolicyid, request -> request.getTsapolicyid().equals(tsapolicyid));
+        return new JarSignerSignRequestMatcher("has tsapolicyid ", tsapolicyid, request -> request.getTsapolicyid()
+                .equals(tsapolicyid));
     }
 
     static TypeSafeMatcher<JarSignerSignRequest> hasTsaDigestalg(String tsadigestalg) {
-        return new JarSignerSignRequestMatcher(
-                "has tsadigestalg ", tsadigestalg, request -> request.getTsadigestalg().equals(tsadigestalg));
+        return new JarSignerSignRequestMatcher("has tsadigestalg ", tsadigestalg, request -> request.getTsadigestalg()
+                .equals(tsadigestalg));
     }
 
     static TypeSafeMatcher<JarSignerSignRequest> hasCertchain(String certchain) {

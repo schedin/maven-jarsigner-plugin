@@ -86,14 +86,14 @@ class TsaSelector {
      * server, but good enough.
      */
     TsaServer getServer() {
-        TsaServer bestTsaServer = tsaServers.get(0);
+        TsaServer best = tsaServers.get(0);
         for (int i = 1; i < tsaServers.size(); i++) {
-            if (bestTsaServer.failureCount.get() > tsaServers.get(i).failureCount.get()) {
-                bestTsaServer = tsaServers.get(i);
+            if (best.failureCount.get() > tsaServers.get(i).failureCount.get()) {
+                best = tsaServers.get(i);
             }
         }
-        currentTsaServer.set(bestTsaServer);
-        return bestTsaServer;
+        currentTsaServer.set(best);
+        return best;
     }
 
     /**

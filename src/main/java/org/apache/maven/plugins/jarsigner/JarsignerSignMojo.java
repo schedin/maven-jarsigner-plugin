@@ -292,7 +292,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             } else {
                 // Last attempt failed, use this failure as resulting failure
                 throw new MojoExecutionException(
-                    getMessage("failure", getCommandlineInfo(result.getCommandline()), resultCode));
+                        getMessage("failure", getCommandlineInfo(result.getCommandline()), resultCode));
             }
         }
     }

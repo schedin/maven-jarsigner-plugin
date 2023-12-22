@@ -18,8 +18,6 @@
  */
 package org.apache.maven.plugins.jarsigner;
 
-import static org.junit.Assert.*;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,6 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.maven.plugins.jarsigner.TsaSelector.TsaServer;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class TsaSelectorTest {
 
@@ -45,7 +45,7 @@ public class TsaSelectorTest {
         assertNull(tsaServer.getTsaPolicyId());
         assertNull(tsaServer.getTsaDigestAlt());
 
-        //Make sure "next" server also contains null values
+        // Make sure "next" server also contains null values
         tsaServer = tsaSelector.getServer();
         assertNull(tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
@@ -56,7 +56,7 @@ public class TsaSelectorTest {
     @Test
     public void testFailureCount() {
         tsaSelector = new TsaSelector(
-                new String[]{"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
 
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url1.com", tsaServer.getTsaUrl());
@@ -72,7 +72,7 @@ public class TsaSelectorTest {
         assertNull(tsaServer.getTsaPolicyId());
         assertNull(tsaServer.getTsaDigestAlt());
 
-        //Should get same server again
+        // Should get same server again
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url2.com", tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
@@ -85,7 +85,7 @@ public class TsaSelectorTest {
         executor = Executors.newFixedThreadPool(2);
 
         tsaSelector = new TsaSelector(
-            new String[]{"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, null);
 
         // Register a single failure on the first URL so that the threads will use URL 2
         TsaServer serverThreadMain = tsaSelector.getServer();
@@ -129,14 +129,15 @@ public class TsaSelectorTest {
 
     @Test
     public void testDigestAlgoritm() {
-        tsaSelector = new TsaSelector(new String[]{"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, "SHA-512");
+        tsaSelector = new TsaSelector(
+                new String[] {"http://url1.com", "http://url2.com", "http://url3.com"}, null, null, "SHA-512");
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url1.com", tsaServer.getTsaUrl());
         assertNull(tsaServer.getTsaAlias());
         assertNull(tsaServer.getTsaPolicyId());
         assertEquals("SHA-512", tsaServer.getTsaDigestAlt());
 
-        //Make sure that the next URL has the same digest algorithm
+        // Make sure that the next URL has the same digest algorithm
         tsaSelector.registerFailure();
         tsaServer = tsaSelector.getServer();
         assertEquals("http://url2.com", tsaServer.getTsaUrl());
@@ -147,7 +148,7 @@ public class TsaSelectorTest {
 
     @Test
     public void testKeyStoreAliasAndOid() {
-        tsaSelector = new TsaSelector(null, new String[]{"alias1", "alias2"}, new String[]{"1.1", "1.2"}, null);
+        tsaSelector = new TsaSelector(null, new String[] {"alias1", "alias2"}, new String[] {"1.1", "1.2"}, null);
         tsaServer = tsaSelector.getServer();
         assertNull(tsaServer.getTsaUrl());
         assertEquals("alias1", tsaServer.getTsaAlias());
@@ -162,7 +163,8 @@ public class TsaSelectorTest {
 
     @Test
     public void testFailureRegistrationWithoutCurrent() {
-        tsaSelector = new TsaSelector(new String[]{"http://url1.com"}, new String[]{"alias1"}, new String[]{"1.1"}, "SHA-384");
+        tsaSelector = new TsaSelector(
+                new String[] {"http://url1.com"}, new String[] {"alias1"}, new String[] {"1.1"}, "SHA-384");
         tsaSelector.registerFailure(); // Should not throw any exception
 
         // Make sure further execution works

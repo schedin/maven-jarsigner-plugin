@@ -20,24 +20,16 @@ package org.apache.maven.plugins.jarsigner;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugins.jarsigner.JarsignerSignMojo.Sleeper;
-import org.apache.maven.plugins.jarsigner.JarsignerSignMojo.WaitStrategy;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
-import org.apache.maven.shared.utils.cli.javatool.JavaToolResult;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,15 +38,10 @@ import org.mockito.ArgumentCaptor;
 
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_ERROR;
 import static org.apache.maven.plugins.jarsigner.TestJavaToolResults.RESULT_OK;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.everyItem;
-import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -107,30 +94,34 @@ public class JarsignerSignMojoTsaTest {
 
     @Test
     public void testMutipleTsa() throws Exception {
-        // Special setup (non-normal) Mockito, because the same JarSignerSignRequest instance is used with modified URL 
+        // Special setup (non-normal) Mockito, because the same JarSignerSignRequest instance is used with modified URL
         List<String> tsaUrls = new ArrayList<>();
-        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenAnswer(invocation -> {
-            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArguments()[0];
-            tsaUrls.add(request.getTsaLocation());
-            return RESULT_ERROR;
-        }).thenAnswer(invocation -> {
-            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArguments()[0];
-            tsaUrls.add(request.getTsaLocation());
-            return RESULT_OK;
-        });
-        
+        when(jarSigner.execute(any(JarSignerSignRequest.class)))
+                .thenAnswer(invocation -> {
+                    JarSignerSignRequest request =
+                            (JarSignerSignRequest) invocation.getArguments()[0];
+                    tsaUrls.add(request.getTsaLocation());
+                    return RESULT_ERROR;
+                })
+                .thenAnswer(invocation -> {
+                    JarSignerSignRequest request =
+                            (JarSignerSignRequest) invocation.getArguments()[0];
+                    tsaUrls.add(request.getTsaLocation());
+                    return RESULT_OK;
+                });
+
         configuration.put("maxTries", "10");
         configuration.put("tsa", "http://my-timestamp.server.com,http://other-timestamp.example.com");
 
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
-        
+
         verify(jarSigner, times(2)).execute(any());
         assertEquals("http://my-timestamp.server.com", tsaUrls.get(0));
         assertEquals("http://other-timestamp.example.com", tsaUrls.get(1));
     }
-    
+
     private File createArchives(int numberOfArchives) throws IOException {
         File archiveDirectory = new File(projectDir, "my_archive_dir");
         archiveDirectory.mkdir();
@@ -139,6 +130,4 @@ public class JarsignerSignMojoTsaTest {
         }
         return archiveDirectory;
     }
-
 }
-
