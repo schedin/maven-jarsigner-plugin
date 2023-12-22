@@ -21,6 +21,7 @@ package org.apache.maven.plugins.jarsigner;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -106,16 +107,28 @@ public class JarsignerSignMojoTsaTest {
 
     @Test
     public void testMutipleTsa() throws Exception {
-        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_ERROR).thenReturn(RESULT_OK);
+        // Special setup (non-normal) Mockito, because the same JarSignerSignRequest instance is used with modified URL 
+        List<String> tsaUrls = new ArrayList<>();
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenAnswer(invocation -> {
+            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArguments()[0];
+            tsaUrls.add(request.getTsaLocation());
+            return RESULT_ERROR;
+        }).thenAnswer(invocation -> {
+            JarSignerSignRequest request = (JarSignerSignRequest) invocation.getArguments()[0];
+            tsaUrls.add(request.getTsaLocation());
+            return RESULT_OK;
+        });
+        
         configuration.put("maxTries", "10");
         configuration.put("tsa", "http://my-timestamp.server.com,http://other-timestamp.example.com");
 
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
-
-        verify(jarSigner, times(1)).execute(argThat(request -> ((JarSignerSignRequest) request).getTsaLocation().equals("http://my-timestamp.server.com")));
-        verify(jarSigner, times(1)).execute(argThat(request -> ((JarSignerSignRequest) request).getTsaLocation().equals("http://other-timestamp.example.com")));
+        
+        verify(jarSigner, times(2)).execute(any());
+        assertEquals("http://my-timestamp.server.com", tsaUrls.get(0));
+        assertEquals("http://other-timestamp.example.com", tsaUrls.get(1));
     }
     
     private File createArchives(int numberOfArchives) throws IOException {
