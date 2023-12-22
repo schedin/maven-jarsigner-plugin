@@ -61,7 +61,6 @@ class TsaSelector {
 
     TsaSelector(String[] tsa, String[] tsacert, String[] tsapolicyid, String tsadigestalg) {
         List<TsaServer> tsaServersTmp = new ArrayList<>();
-
         this.tsaServers = Collections.unmodifiableList(tsaServersTmp);
     }
 
@@ -107,7 +106,7 @@ class TsaSelector {
 
     /** Representation of a single TSA server and the parameters to use for it */
     static class TsaServer {
-        private static TsaServer EMPTY = new TsaServer(null, null, null, null);
+        private static final TsaServer EMPTY = new TsaServer(null, null, null, null);
 
         private final AtomicInteger failureCount = new AtomicInteger(0);
         private final String tsaUrl;
