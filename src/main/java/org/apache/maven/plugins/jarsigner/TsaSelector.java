@@ -66,28 +66,18 @@ class TsaSelector {
         
         List<TsaServer> tsaServersTmp = new ArrayList<>();
         
-        for (int i == 0; i < ) // TODO
-        
-        
+        for (int i = 0; i < Math.max(tsa.length, tsacert.length); i++) {
+            String tsaUrl = i < tsa.length ? tsa[i] : null;
+            String tsaAlias = i < tsacert.length ? tsacert[i] : null;
+            String tsaPolicyId = i < tsapolicyid.length ? tsapolicyid[i] : null;
+            tsaServersTmp.add(new TsaServer(tsaUrl, tsaAlias, tsaPolicyId, tsadigestalg));
+        }
+
         if (tsaServersTmp.isEmpty()) {
             tsaServersTmp.add(TsaServer.EMPTY);
         }
         this.tsaServers = Collections.unmodifiableList(tsaServersTmp);
     }
-
-//    private void updateTsaParameters(JarSignerSignRequest request) {
-//        if (tsa != null && tsa.length > 0) {
-//            request.setTsaLocation(tsa[0]);
-//        }
-//        if (tsacert != null && tsacert.length > 0) {
-//            request.setTsaAlias(tsacert[0]);
-//        }
-//        request.setCertchain(certchain);
-//        if (tsapolicyid != null && tsapolicyid.length > 0) {
-//            request.setTsapolicyid(tsapolicyid[0]);
-//        }
-//        request.setTsadigestalg(tsadigestalg);
-//    }
 
     /**
      * Gets the next "best" TSA server to use.
@@ -95,7 +85,7 @@ class TsaSelector {
      * Uses a "best effort" approach without any synchronization. It may not select the "snapshot-consistent" best TSA
      * server, but good enough.
      */
-    public TsaServer getServer() {
+    TsaServer getServer() {
         TsaServer bestTsaServer = tsaServers.get(0);
         for (int i = 1; i < tsaServers.size(); i++) {
             if (bestTsaServer.failureCount.get() > tsaServers.get(i).failureCount.get()) {
@@ -112,7 +102,7 @@ class TsaSelector {
      * cause of the failure it is registered as a failure for the current used TsaServer to be used when determining the
      * next TsaServer to try.
      */
-    public void registerFailure() {
+    void registerFailure() {
         if (currentTsaServer.get() != null) {
             currentTsaServer.get().failureCount.incrementAndGet();
         }
@@ -135,19 +125,19 @@ class TsaSelector {
             this.tsaDigestAlt = tsaDigestAlt;
         }
 
-        public String getTsaUrl() {
+        String getTsaUrl() {
             return tsaUrl;
         }
 
-        public String getTsaAlias() {
+        String getTsaAlias() {
             return tsaAlias;
         }
 
-        public String getTsaPolicyId() {
+        String getTsaPolicyId() {
             return tsaPolicyId;
         }
 
-        public String getTsaDigestAlt() {
+        String getTsaDigestAlt() {
             return tsaDigestAlt;
         }
     }
