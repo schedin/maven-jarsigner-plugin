@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
@@ -30,6 +31,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.jarsigner.JarSigner;
 import org.apache.maven.shared.jarsigner.JarSignerSignRequest;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,6 +44,7 @@ import static org.hamcrest.CoreMatchers.everyItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -51,6 +54,7 @@ public class JarsignerSignMojoTsaTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    private Locale originalLocale;
     private MavenProject project = mock(MavenProject.class);
     private JarSigner jarSigner = mock(JarSigner.class);
 
@@ -61,6 +65,8 @@ public class JarsignerSignMojoTsaTest {
 
     @Before
     public void setUp() throws Exception {
+        originalLocale = Locale.getDefault();
+        Locale.setDefault(Locale.ENGLISH); // For English ResourceBundle to test log messages
         projectDir = folder.newFolder("dummy-project");
         mojoTestCreator =
                 new MojoTestCreator<JarsignerSignMojo>(JarsignerSignMojo.class, project, projectDir, jarSigner);
@@ -68,6 +74,11 @@ public class JarsignerSignMojoTsaTest {
         mojoTestCreator.setLog(log);
         Artifact mainArtifact = TestArtifacts.createJarArtifact(projectDir, "my-project.jar");
         when(project.getArtifact()).thenReturn(mainArtifact);
+    }
+
+    @After
+    public void tearDown() {
+        Locale.setDefault(originalLocale);
     }
 
     @Test
@@ -123,6 +134,54 @@ public class JarsignerSignMojoTsaTest {
     }
 
     // TODO: Add verification tests
+
+    @Test
+    public void testVerifyUsageOfBothTsaAndTsacert() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("tsa", "http://my-timestamp.server.com");
+        configuration.put("tsacert", "mytsacertalias");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log).warn(contains("Usage of both tsa and tsacert should be avoided"));
+    }
+
+    @Test
+    public void testVerifyUsageOfDifferentNumberOfTsapolicyidAndTsa() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("tsa", "http://my-timestamp1.server.com,http://my-timestamp2.server.com");
+        configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log).warn(contains("The number of tsapolicyid OIDs is not the same as the number or TSA servers"));
+    }
+
+    @Test
+    public void testVerifyUsageOfDifferentNumberOfTsapolicyidAndTsacert() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("tsacert", "alias1,alisa2");
+        configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log).warn(contains("The number of tsapolicyid OIDs is not the same as the number or TSA servers"));
+    }
+
+    @Test
+    public void testVerifyMultipleTsaButNoRetry() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("tsa", "http://my-timestamp1.server.com,http://my-timestamp2.server.com");
+        configuration.put("maxTries", "1");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log).warn(contains("Multiple TSA both no retry"));
+    }
 
     private File createArchives(int numberOfArchives) throws IOException {
         File archiveDirectory = new File(projectDir, "my_archive_dir");
