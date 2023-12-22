@@ -76,9 +76,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * <p>URL(s) to Time Stamping Authority (TSA) server(s) to use to timestamp the signing.
      * See <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
-     * </p>
-     *
-     * <p>Separate multiple TSA URLs with comma (without space) or a nested XML tag.</p>
+     * Separate multiple TSA URLs with comma (without space) or a nested XML tag.</p>
      *
      * <pre>{@code
      * <configuration>
@@ -108,9 +106,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * <p>Alias(es) for certificate(s) in the active keystore used to find a TSA URL. From the certificate the X509v3
      * extension "Subject Information Access" field is examined to find the TSA server URL. See
-     * <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.</p>
-     *
-     * <p>Separate multiple aliases with comma (without space) or a nested XML tag.</p>
+     * <a href="https://docs.oracle.com/javase/7/docs/technotes/tools/windows/jarsigner.html#Options">options</a>.
+     * Separate multiple aliases with comma (without space) or a nested XML tag.</p>
      *
      * <pre>{@code
      * <configuration>
@@ -143,9 +140,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     /**
      * <p>OID(s) to send to the TSA server to identify the policy ID the server should use. If not specified TSA server
      * will choose a default policy ID. Each TSA server vendor will typically define their own policy OIDs. See
-     * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html#CCHIFIAD">options</a>.</p>
-     *
-     * <p>Separate multiple OIDs with comma (without space) or a nested XML tag.</p>
+     * <a href="https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html#CCHIFIAD">options</a>.
+     * Separate multiple OIDs with comma (without space) or a nested XML tag.</p>
      *
      * <pre>{@code
      * <configuration>
