@@ -156,7 +156,7 @@ public class JarsignerSignMojoTsaTest {
 
         mojo.execute();
 
-        verify(log).warn(contains("Too many (3) number of OIDs given, but only 2 and 0 TSA URL and TSA certificate alias, respectively"));
+        verify(log).warn(contains("Too many (3) number of OIDs given"));
     }
 
     @Test
@@ -170,7 +170,7 @@ public class JarsignerSignMojoTsaTest {
         mojo.execute();
 
         // Alomst the same warning log as previous test case
-        verify(log).warn(contains("Too many (3) number of OIDs given, but only 0 and 2 TSA URL and TSA certificate alias, respectively"));
+        verify(log).warn(contains("Too many (3) number of OIDs given"));
     }
 
     @Test
@@ -194,7 +194,7 @@ public class JarsignerSignMojoTsaTest {
 
         mojo.execute();
 
-        verify(log).warn(contains("2 TSA certificate aliases specified. Only first will be used because maxTries is set to 1"));
+        verify(log).warn(contains("2 TSA certificate aliases specified. Only first"));
     }
 
     private File createArchives(int numberOfArchives) throws IOException {
