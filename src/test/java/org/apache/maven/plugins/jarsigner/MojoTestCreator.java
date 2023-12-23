@@ -125,7 +125,7 @@ public class MojoTestCreator<T extends AbstractJarsignerMojo> {
             field.set(instance, new File(stringValue));
         } else if (fieldType.equals(String[].class)) {
             if (stringValue.isEmpty()) {
-                // Maven defaults empty list if no default value exists
+                // Maven defaults to empty list if no default value exists
                 field.set(instance, new String[0]);
             } else {
                 String[] values = stringValue.split(",");

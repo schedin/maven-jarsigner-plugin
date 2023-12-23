@@ -91,7 +91,7 @@ public class TsaSelectorTest {
         TsaServer serverThreadMain = tsaSelector.getServer();
         tsaSelector.registerFailure();
 
-        CountDownLatch doneSignal = new CountDownLatch(2); // Indication that both thread has gotten a server
+        CountDownLatch doneSignal = new CountDownLatch(2); // Indication that both threads has gotten a server
         Semaphore semaphore = new Semaphore(0); // When the threads may continue executing after gotten a server
 
         AtomicReference<TsaServer> serverThread1 = new AtomicReference<>();
@@ -119,7 +119,7 @@ public class TsaSelectorTest {
         assertEquals("http://url2.com", serverThread1.get().getTsaUrl());
         assertEquals("http://url2.com", serverThread2.get().getTsaUrl());
 
-        // The next best URL is number 3
+        // The best URL is now number 3
         assertEquals("http://url3.com", tsaSelector.getServer().getTsaUrl());
 
         // Trigger a new failure, now URL 1 is best again.
