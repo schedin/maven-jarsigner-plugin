@@ -167,8 +167,8 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
     private String[] tsapolicyid;
 
     /**
-     * The message digest algorithm to use in the messageImprint that the TSA server will timestamp. For example
-     * {@code SHA-384}. A default value will be selected by jarsigner if this parameter is not set. Only available in
+     * The message digest algorithm to use in the messageImprint that the TSA server will timestamp. A default value
+     * (for example {@code SHA-384}) will be selected by jarsigner if this parameter is not set. Only available in
      * Java 11 and later. See <a href="https://docs.oracle.com/en/java/javase/11/tools/jarsigner.html">options</a>.
      *
      * @since 3.1.0
