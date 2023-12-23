@@ -96,7 +96,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
      * <p>Usage of multiple TSA servers only makes sense when {@link #maxTries} is more than 1. A different TSA server
      * will only be used at retries.</p>
      *
-     * <p>Changed to a list since 3.1.0. Single element (without comma) is still supported.</p>
+     * <p>Changed to a list since 3.1.0. Single XML element (without comma) is still supported.</p>
      *
      * @since 1.3
      */
@@ -130,7 +130,7 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
      * <p>Usage of multiple aliases only makes sense when {@link #maxTries} is more than 1. A different TSA server
      * will only be used at retries.</p>
      *
-     * <p>Changed to a list since 3.1.0. Single element (without comma) is still supported.</p>
+     * <p>Changed to a list since 3.1.0. Single XML element (without comma) is still supported.</p>
      *
      * @since 1.3
      */
