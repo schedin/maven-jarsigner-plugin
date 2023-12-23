@@ -265,7 +265,19 @@ public class JarsignerSignMojo extends AbstractJarsignerMojo {
             getLog().warn(getMessage("invalidThreadCount", threadCount));
             threadCount = 1;
         }
-        // TODO: fix validation
+
+        if (tsa.length > 0 && tsacert.length > 0) {
+            getLog().warn(getMessage("warnUsageTsaAndTsacertSimultaneous"));
+        }
+        if (tsapolicyid.length > tsa.length || tsapolicyid.length > tsacert.length ) {
+            getLog().warn(getMessage("warnUsageTsapolicyidTooMany", tsapolicyid.length, tsa.length, tsacert.length));
+        }
+        if (tsa.length > 1 && maxTries == 1) {
+            getLog().warn(getMessage("warnUsageMultiTsaWithoutRetry", tsa.length));
+        }
+        if (tsacert.length > 1 && maxTries == 1) {
+            getLog().warn(getMessage("warnUsageMultiTsacertWithoutRetry", tsacert.length));
+        }
         tsaSelector = new TsaSelector(tsa, tsacert, tsapolicyid, tsadigestalg);
     }
 

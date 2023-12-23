@@ -133,8 +133,6 @@ public class JarsignerSignMojoTsaTest {
         assertEquals("http://other-timestamp.example.com", tsaUrls.get(1));
     }
 
-    // TODO: Add verification tests
-
     @Test
     public void testVerifyUsageOfBothTsaAndTsacert() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
@@ -145,7 +143,7 @@ public class JarsignerSignMojoTsaTest {
 
         mojo.execute();
 
-        verify(log).warn(contains("Usage of both tsa and tsacert should be avoided"));
+        verify(log).warn(contains("Usage of both -tsa and -tsacert is undefined"));
     }
 
     @Test
@@ -153,25 +151,26 @@ public class JarsignerSignMojoTsaTest {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         configuration.put("maxTries", "2");
         configuration.put("tsa", "http://my-timestamp1.server.com,http://my-timestamp2.server.com");
-        configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
+        configuration.put("tsapolicyid", "1.1,1.2,1.3"); // Too many OIDs specified
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
-        verify(log).warn(contains("The number of tsapolicyid OIDs is not the same as the number or TSA servers"));
+        verify(log).warn(contains("Too many (3) number of OIDs given, but only 2 and 0 TSA URL and TSA certificate alias, respectively"));
     }
 
     @Test
     public void testVerifyUsageOfDifferentNumberOfTsapolicyidAndTsacert() throws Exception {
         when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
         configuration.put("maxTries", "2");
-        configuration.put("tsacert", "alias1,alisa2");
-        configuration.put("tsapolicyid", "1.2.3.4"); // Too few OIDs specified
+        configuration.put("tsacert", "alias1,alias2");
+        configuration.put("tsapolicyid", "1.1,1.2,1.3"); // Too many OIDs specified
         JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
 
         mojo.execute();
 
-        verify(log).warn(contains("The number of tsapolicyid OIDs is not the same as the number or TSA servers"));
+        // Alomst the same warning log as previous test case
+        verify(log).warn(contains("Too many (3) number of OIDs given, but only 0 and 2 TSA URL and TSA certificate alias, respectively"));
     }
 
     @Test
@@ -183,7 +182,19 @@ public class JarsignerSignMojoTsaTest {
 
         mojo.execute();
 
-        verify(log).warn(contains("Multiple TSA both no retry"));
+        verify(log).warn(contains("2 TSA URLs specified. Only first will be used because maxTries is set to 1"));
+    }
+
+    @Test
+    public void testVerifyMultipleTsacertButNoRetry() throws Exception {
+        when(jarSigner.execute(any(JarSignerSignRequest.class))).thenReturn(RESULT_OK);
+        configuration.put("tsacert", "alias1,alias2");
+        configuration.put("maxTries", "1");
+        JarsignerSignMojo mojo = mojoTestCreator.configure(configuration);
+
+        mojo.execute();
+
+        verify(log).warn(contains("2 TSA certificate aliases specified. Only first will be used because maxTries is set to 1"));
     }
 
     private File createArchives(int numberOfArchives) throws IOException {
